@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class UnitKerja extends Model
+{
+    protected $fillable = ['nama', 'kode', 'deskripsi'];
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function folders(): HasMany
+    {
+        return $this->hasMany(Folder::class);
+    }
+
+    public function sharedItems()
+    {
+        return $this->morphMany(Share::class, 'shared_to');
+    }
+}
