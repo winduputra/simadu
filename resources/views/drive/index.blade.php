@@ -1,4 +1,5 @@
 <x-app-layout>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <div class="space-y-8 relative min-h-[500px]" x-data="{ 
         showCreateFolder: false, 
         showUpload: false, 
@@ -36,7 +37,8 @@
             let folderId = {{ $folder ? $folder->id : 'null' }};
             Array.from(files).forEach(file => {
                 let uploadId = Date.now() + Math.random().toString(36).substr(2, 9);
-                let upload = { id: uploadId, name: file.name, progress: 0, status: 'uploading', error: null };
+                let controller = new AbortController();
+                let upload = { id: uploadId, name: file.name, progress: 0, status: 'uploading', error: null, controller: controller };
                 this.uploads.push(upload);
                 
                 let formData = new FormData();
@@ -44,6 +46,7 @@
                 if(folderId) formData.append('folder_id', folderId);
                 
                 axios.post('{{ route('documents.upload') }}', formData, {
+                    signal: controller.signal,
                     headers: { 'Content-Type': 'multipart/form-data', 'Accept': 'application/json' },
                     onUploadProgress: (progressEvent) => {
                         let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -53,12 +56,44 @@
                 }).then(res => {
                     let target = this.uploads.find(u => u.id === uploadId);
                     if(target) { target.status = 'completed'; target.progress = 100; }
-                    setTimeout(() => window.location.reload(), 1500);
+                    // Reload only when all active uploads are done
+                    if (!this.uploads.some(u => u.status === 'uploading')) {
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
                 }).catch(err => {
+                    if (axios.isCancel(err)) {
+                        return; // do nothing, already handled
+                    }
                     let target = this.uploads.find(u => u.id === uploadId);
                     if(target) { target.status = 'error'; target.error = err.response?.data?.message || err.message; }
+                    // Also check reload here in case other files finished but this one errored
+                    if (!this.uploads.some(u => u.status === 'uploading')) {
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
                 });
             });
+        },
+        cancelUpload(uploadId) {
+            let target = this.uploads.find(u => u.id === uploadId);
+            if (target) {
+                if (target.controller) {
+                    target.controller.abort();
+                }
+                this.uploads = this.uploads.filter(u => u.id !== uploadId);
+            }
+        },
+        clearUploads() {
+            if (this.uploads.some(u => u.status === 'uploading')) {
+                if (!confirm('Batalkan semua unggahan yang sedang berjalan?')) {
+                    return;
+                }
+            }
+            this.uploads.forEach(u => {
+                if (u.status === 'uploading' && u.controller) {
+                    u.controller.abort();
+                }
+            });
+            this.uploads = [];
         }
     }" 
     @click="contextMenu.show = false" 
@@ -274,8 +309,8 @@
         </div>
 
         <!-- Upload Files Modal -->
-        <div x-show="showUpload" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl" @click.away="showUpload = false">
+        <div x-show="showUpload" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak x-data="{ selectedFiles: [] }">
+            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl" @click.away="showUpload = false; selectedFiles = []">
                 <h3 class="text-lg font-bold text-slate-800 mb-4">Upload Files</h3>
                 <form action="{{ route('documents.upload') }}" method="POST" enctype="multipart/form-data">
                     @csrf
@@ -284,16 +319,31 @@
                     @endif
                     <div class="space-y-6">
                         <div class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer relative">
-                            <input type="file" name="files[]" multiple required class="absolute inset-0 opacity-0 cursor-pointer">
+                            <input type="file" name="files[]" multiple required class="absolute inset-0 opacity-0 cursor-pointer" @change="selectedFiles = Array.from($event.target.files)">
                             <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center mb-3">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             </div>
-                            <span class="text-slate-600 font-semibold text-sm">Drag and drop files here, or click to browse</span>
+                            <span class="text-slate-600 font-semibold text-sm" x-text="selectedFiles.length > 0 ? `${selectedFiles.length} file dipilih` : 'Drag and drop files here, or click to browse'">Drag and drop files here, or click to browse</span>
                             <span class="text-slate-400 text-xs mt-1">Maximum size: 200MB per file</span>
                         </div>
+
+                        <!-- Selected Files List -->
+                        <template x-if="selectedFiles.length > 0">
+                            <div class="space-y-2 max-h-40 overflow-y-auto bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Daftar File Dipilih:</p>
+                                <div class="space-y-1">
+                                    <template x-for="file in selectedFiles" :key="file.name + file.size">
+                                        <div class="flex items-center justify-between py-1 px-2 bg-white border border-slate-100 rounded-lg text-xs">
+                                            <span class="font-medium text-slate-700 truncate max-w-[70%]" x-text="file.name"></span>
+                                            <span class="text-slate-400" x-text="(file.size / 1024).toFixed(1) + ' KB'"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showUpload = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
+                        <button type="button" @click="showUpload = false; selectedFiles = []" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
                         <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Upload</button>
                     </div>
                 </form>
@@ -374,35 +424,42 @@
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                     Uploading <span class="mx-1" x-text="uploads.filter(u => u.status === 'uploading').length"></span> items
                 </h3>
-                <button @click.stop="uploads = uploads.filter(u => u.status === 'uploading')" class="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition-colors" title="Clear completed">
+                <button @click.stop="clearUploads()" class="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition-colors" title="Batal & Tutup Semua">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div id="uploadList" class="overflow-y-auto flex-1 p-2 space-y-1">
                 <template x-for="u in uploads" :key="u.id">
-                    <div class="p-3 bg-white border border-slate-100 rounded-xl flex items-start space-x-3" :class="{'bg-rose-50/50': u.status === 'error', 'bg-emerald-50/30': u.status === 'completed'}">
-                        <div class="mt-1 shrink-0">
-                            <template x-if="u.status === 'uploading'">
-                                <svg class="w-5 h-5 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            </template>
-                            <template x-if="u.status === 'completed'">
-                                <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            </template>
-                            <template x-if="u.status === 'error'">
-                                <svg class="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </template>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl flex items-start justify-between space-x-3" :class="{'bg-rose-50/50': u.status === 'error', 'bg-emerald-50/30': u.status === 'completed'}">
+                        <div class="flex items-start space-x-3 flex-1 min-w-0">
+                            <div class="mt-1 shrink-0">
+                                <template x-if="u.status === 'uploading'">
+                                    <svg class="w-5 h-5 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                </template>
+                                <template x-if="u.status === 'completed'">
+                                    <svg class="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </template>
+                                <template x-if="u.status === 'error'">
+                                    <svg class="w-5 h-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </template>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-slate-700 truncate" x-text="u.name"></p>
+                                <template x-if="u.status === 'uploading'">
+                                    <div class="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" :style="`width: ${u.progress}%`"></div>
+                                    </div>
+                                </template>
+                                <template x-if="u.status === 'error'">
+                                    <p class="text-xs text-rose-500 mt-1 truncate" x-text="u.error"></p>
+                                </template>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-slate-700 truncate" x-text="u.name"></p>
-                            <template x-if="u.status === 'uploading'">
-                                <div class="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                    <div class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" :style="`width: ${u.progress}%`"></div>
-                                </div>
-                            </template>
-                            <template x-if="u.status === 'error'">
-                                <p class="text-xs text-rose-500 mt-1 truncate" x-text="u.error"></p>
-                            </template>
-                        </div>
+                        <template x-if="u.status === 'uploading'">
+                            <button @click.stop="cancelUpload(u.id)" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0" title="Batal Unggah">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </template>
                     </div>
                 </template>
             </div>
