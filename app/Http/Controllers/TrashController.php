@@ -49,13 +49,21 @@ class TrashController extends Controller
     public function emptyTrash(Request $request)
     {
         $user = $request->user();
+        
+        $folders = Folder::onlyTrashed()->where('user_id', $user->id)->get();
+        foreach ($folders as $folder) {
+            if ($folder->exists) {
+                FolderService::forceDelete($folder, $user, $request);
+            }
+        }
+
         $documents = Document::onlyTrashed()->where('user_id', $user->id)->get();
         foreach ($documents as $doc) {
-            FileManagerService::forceDeleteFile($doc, $user, $request);
+            if ($doc->exists) {
+                FileManagerService::forceDeleteFile($doc, $user, $request);
+            }
         }
-        Folder::onlyTrashed()->where('user_id', $user->id)->each(function ($folder) use ($user, $request) {
-            FolderService::forceDelete($folder, $user, $request);
-        });
+
         return back()->with('success', 'Trash emptied.');
     }
 }

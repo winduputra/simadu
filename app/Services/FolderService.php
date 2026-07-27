@@ -42,6 +42,16 @@ class FolderService
 
     public static function delete(Folder $folder, User $user, ?Request $request = null): void
     {
+        // Soft delete all child documents
+        \App\Models\Document::where('folder_id', $folder->id)->each(function ($doc) use ($user, $request) {
+            FileManagerService::deleteFile($doc, $user, $request);
+        });
+
+        // Soft delete all child folders
+        Folder::where('parent_id', $folder->id)->each(function ($child) use ($user, $request) {
+            static::delete($child, $user, $request);
+        });
+
         $folder->delete();
         ActivityLogService::log($user->id, 'delete', $folder, null, $request);
     }
@@ -49,14 +59,48 @@ class FolderService
     public static function restore(Folder $folder, User $user, ?Request $request = null): void
     {
         $folder->restore();
+
+        // Restore child folders
+        Folder::onlyTrashed()->where('parent_id', $folder->id)->each(function ($child) use ($user, $request) {
+            static::restore($child, $user, $request);
+        });
+
+        // Restore child documents
+        \App\Models\Document::onlyTrashed()->where('folder_id', $folder->id)->each(function ($doc) use ($user, $request) {
+            FileManagerService::restoreFile($doc, $user, $request);
+        });
+
         ActivityLogService::log($user->id, 'restore', $folder, null, $request);
     }
 
     public static function forceDelete(Folder $folder, User $user, ?Request $request = null): void
     {
+        // 1. Force delete child documents (trashed and non-trashed)
+        $documents = \App\Models\Document::withTrashed()->where('folder_id', $folder->id)->get();
+        foreach ($documents as $doc) {
+            FileManagerService::forceDeleteFile($doc, $user, $request);
+        }
+
+        // 2. Force delete child folders recursively (trashed and non-trashed)
+        $children = Folder::withTrashed()->where('parent_id', $folder->id)->get();
+        foreach ($children as $child) {
+            static::forceDelete($child, $user, $request);
+        }
+
+        // 3. Get NAS path before database deletion
+        $nasPath = FileManagerService::getTargetDirectory($user, $folder->id);
+
         ActivityLogService::log($user->id, 'force_delete', $folder, [
             'folder_name' => $folder->nama,
         ], $request);
+
+        // 4. Force delete current folder from DB
         $folder->forceDelete();
+
+        // 5. Delete physical NAS directory if exists
+        $disk = FileManagerService::getNasDisk();
+        if (Storage::disk($disk)->exists($nasPath)) {
+            Storage::disk($disk)->deleteDirectory($nasPath);
+        }
     }
 }
