@@ -6,11 +6,18 @@ use App\Models\Folder;
 use App\Models\User;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\Storage;
+
 class FolderService
 {
     public static function create(array $data, User $user, ?Request $request = null): Folder
     {
         $folder = Folder::create(array_merge($data, ['user_id' => $user->id]));
+        
+        // Buat folder fisik di NAS
+        $nasPath = FileManagerService::getTargetDirectory($user, $folder->id);
+        Storage::disk(FileManagerService::getNasDisk())->makeDirectory($nasPath);
+
         ActivityLogService::log($user->id, 'folder_create', $folder, null, $request);
         return $folder;
     }

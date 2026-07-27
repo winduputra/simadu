@@ -56,6 +56,31 @@ class FileManagerService
         return null;
     }
 
+    /**
+     * Dapatkan direktori target NAS untuk user dan folder tertentu.
+     * Format: {NamaUser}/{FolderParent}/.../{NamaFolder} (Tanpa YYYY/MM)
+     */
+    public static function getTargetDirectory(User $user, ?int $folderId = null): string
+    {
+        $userDir = static::getUserNasDirectory($user);
+        if (!$folderId) {
+            return $userDir;
+        }
+
+        $folder = \App\Models\Folder::find($folderId);
+        if (!$folder) {
+            return $userDir;
+        }
+
+        $chain = array_merge($folder->ancestors(), [$folder]);
+        $folderPaths = array_map(function ($f) {
+            $safe = preg_replace('/[^a-zA-Z0-9\s\-_]/', '', $f->nama);
+            return trim($safe) ?: 'folder_' . $f->id;
+        }, $chain);
+
+        return $userDir . '/' . implode('/', array_filter($folderPaths));
+    }
+
     public static function uploadFile(
         UploadedFile $file,
         User $user,
@@ -69,11 +94,9 @@ class FileManagerService
 
         $disk = static::getNasDisk();
 
-        // Path baru: {NamaUser}/{YYYY/MM}/{uuid}.{ext}
-        $userDir = static::getUserNasDirectory($user);
-        $monthDir = date('Y/m');
+        // Path baru di NAS: {NamaUser}/{FolderStruct}/{uuid}.{ext} (Tanpa YYYY/MM)
+        $directory = static::getTargetDirectory($user, $folderId);
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $directory = $userDir . '/' . $monthDir;
         $path = $file->storeAs($directory, $filename, $disk);
 
         // Auto-deteksi kategori jika tidak dipilih secara manual
