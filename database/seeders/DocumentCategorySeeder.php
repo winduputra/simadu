@@ -11,6 +11,7 @@ class DocumentCategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
+            // Kategori dokumen perkantoran (manual)
             ['nama' => 'Surat Keputusan', 'warna' => '#3B82F6', 'ikon' => 'file-text'],
             ['nama' => 'Nota Dinas', 'warna' => '#8B5CF6', 'ikon' => 'file-text'],
             ['nama' => 'Laporan', 'warna' => '#10B981', 'ikon' => 'bar-chart'],
@@ -20,6 +21,13 @@ class DocumentCategorySeeder extends Seeder
             ['nama' => 'Kontrak', 'warna' => '#F97316', 'ikon' => 'file-signature'],
             ['nama' => 'Foto Kegiatan', 'warna' => '#EC4899', 'ikon' => 'image'],
             ['nama' => 'Lainnya', 'warna' => '#6B7280', 'ikon' => 'file'],
+            // Kategori otomatis berdasarkan ekstensi file
+            ['nama' => 'Document', 'warna' => '#2563EB', 'ikon' => 'file-text'],
+            ['nama' => 'Pictures', 'warna' => '#DB2777', 'ikon' => 'image'],
+            ['nama' => 'Video', 'warna' => '#7C3AED', 'ikon' => 'video'],
+            ['nama' => 'Audio', 'warna' => '#059669', 'ikon' => 'music'],
+            ['nama' => 'Archive', 'warna' => '#D97706', 'ikon' => 'archive'],
+            ['nama' => 'Applications', 'warna' => '#DC2626', 'ikon' => 'cpu'],
         ];
 
         foreach ($categories as $cat) {

@@ -23,54 +23,101 @@
             this.contextMenu.id = id;
             this.contextMenu.name = name;
         },
-        handleDrop(e) {
+        async handleDrop(e) {
             this.isDragging = false;
+            let items = e.dataTransfer.items;
+            if (items && items.length) {
+                let entries = [];
+                for (let i = 0; i < items.length; i++) {
+                    let entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
+                    if (entry) entries.push(entry);
+                }
+                if (entries.length) {
+                    let currentFolderId = {{ $folder ? $folder->id : 'null' }};
+                    await this.traverseEntries(entries, currentFolderId);
+                    return;
+                }
+            }
             let files = e.dataTransfer.files;
-            if (!files.length) return;
-            this.processFiles(files);
+            if (files && files.length) {
+                this.processFiles(files);
+            }
+        },
+        async traverseEntries(entries, parentId) {
+            for (let entry of entries) {
+                if (entry.isFile) {
+                    let file = await new Promise((resolve) => entry.file(resolve));
+                    this.uploadSingleFile(file, parentId);
+                } else if (entry.isDirectory) {
+                    try {
+                        let res = await axios.post('{{ route('folders.create-ajax') }}', {
+                            nama: entry.name,
+                            parent_id: parentId
+                        });
+                        let newFolderId = res.data.id;
+                        let dirReader = entry.createReader();
+                        let childEntries = await new Promise((resolve) => {
+                            let results = [];
+                            let read = () => {
+                                dirReader.readEntries((readResults) => {
+                                    if (readResults.length === 0) {
+                                        resolve(results);
+                                    } else {
+                                        results = results.concat(Array.from(readResults));
+                                        read();
+                                    }
+                                });
+                            };
+                            read();
+                        });
+                        await this.traverseEntries(childEntries, newFolderId);
+                    } catch (err) {
+                        console.error('Error creating folder during drag-and-drop', err);
+                    }
+                }
+            }
         },
         handleFileInput(e) {
             this.processFiles(e.target.files);
             this.showUpload = false;
         },
-        processFiles(files) {
-            let folderId = {{ $folder ? $folder->id : 'null' }};
+        processFiles(files, folderId = null) {
+            let targetFolderId = folderId !== null ? folderId : {{ $folder ? $folder->id : 'null' }};
             Array.from(files).forEach(file => {
-                let uploadId = Date.now() + Math.random().toString(36).substr(2, 9);
-                let controller = new AbortController();
-                let upload = { id: uploadId, name: file.name, progress: 0, status: 'uploading', error: null, controller: controller };
-                this.uploads.push(upload);
-                
-                let formData = new FormData();
-                formData.append('files[]', file);
-                if(folderId) formData.append('folder_id', folderId);
-                
-                axios.post('{{ route('documents.upload') }}', formData, {
-                    signal: controller.signal,
-                    headers: { 'Content-Type': 'multipart/form-data', 'Accept': 'application/json' },
-                    onUploadProgress: (progressEvent) => {
-                        let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        let target = this.uploads.find(u => u.id === uploadId);
-                        if(target) target.progress = percentCompleted;
-                    }
-                }).then(res => {
+                this.uploadSingleFile(file, targetFolderId);
+            });
+        },
+        uploadSingleFile(file, folderId) {
+            let uploadId = Date.now() + Math.random().toString(36).substr(2, 9);
+            let controller = new AbortController();
+            let upload = { id: uploadId, name: file.name, progress: 0, status: 'uploading', error: null, controller: controller };
+            this.uploads.push(upload);
+            
+            let formData = new FormData();
+            formData.append('files[]', file);
+            if (folderId) formData.append('folder_id', folderId);
+            
+            axios.post('{{ route('documents.upload') }}', formData, {
+                signal: controller.signal,
+                headers: { 'Content-Type': 'multipart/form-data', 'Accept': 'application/json' },
+                onUploadProgress: (progressEvent) => {
+                    let percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     let target = this.uploads.find(u => u.id === uploadId);
-                    if(target) { target.status = 'completed'; target.progress = 100; }
-                    // Reload only when all active uploads are done
-                    if (!this.uploads.some(u => u.status === 'uploading')) {
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                }).catch(err => {
-                    if (axios.isCancel(err)) {
-                        return; // do nothing, already handled
-                    }
-                    let target = this.uploads.find(u => u.id === uploadId);
-                    if(target) { target.status = 'error'; target.error = err.response?.data?.message || err.message; }
-                    // Also check reload here in case other files finished but this one errored
-                    if (!this.uploads.some(u => u.status === 'uploading')) {
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                });
+                    if(target) target.progress = percentCompleted;
+                }
+            }).then(res => {
+                let target = this.uploads.find(u => u.id === uploadId);
+                if(target) { target.status = 'completed'; target.progress = 100; }
+                if (!this.uploads.some(u => u.status === 'uploading')) {
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+            }).catch(err => {
+                if (axios.isCancel(err)) return;
+                let target = this.uploads.find(u => u.id === uploadId);
+                if(target) { target.status = 'error'; target.error = err.response?.data?.message || err.message; }
+                if (!this.uploads.some(u => u.status === 'uploading')) {
+                    setTimeout(() => window.location.reload(), 1000);
+                }
             });
         },
         cancelUpload(uploadId) {

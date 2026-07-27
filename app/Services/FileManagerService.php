@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Document;
+use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
-use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -16,6 +16,44 @@ class FileManagerService
     public static function getNasDisk(): string
     {
         return 'nas';
+    }
+
+    /**
+     * Dapatkan direktori NAS untuk user tertentu (menggunakan nama user).
+     */
+    public static function getUserNasDirectory(User $user): string
+    {
+        // Sanitize nama user agar aman sebagai nama folder
+        $safeName = preg_replace('/[^a-zA-Z0-9\s\-_]/', '', $user->nama);
+        $safeName = trim($safeName);
+        return $safeName ?: 'User_' . $user->id;
+    }
+
+    /**
+     * Deteksi kategori otomatis berdasarkan ekstensi file.
+     * Mengembalikan ID kategori atau null jika tidak cocok.
+     */
+    public static function detectCategoryByExtension(string $extension): ?int
+    {
+        $ext = strtolower(ltrim($extension, '.'));
+
+        $map = [
+            'document'     => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'odt', 'ods', 'odp', 'rtf', 'csv'],
+            'pictures'     => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff', 'tif', 'heic', 'heif'],
+            'video'        => ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'mpeg', 'mpg', '3gp', 'm4v'],
+            'audio'        => ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a', 'opus'],
+            'archive'      => ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
+            'applications' => ['apk', 'exe', 'msi', 'dmg', 'deb', 'rpm', 'appimage'],
+        ];
+
+        foreach ($map as $slug => $extensions) {
+            if (in_array($ext, $extensions)) {
+                $category = DocumentCategory::where('slug', $slug)->first();
+                return $category?->id;
+            }
+        }
+
+        return null;
     }
 
     public static function uploadFile(
@@ -30,9 +68,18 @@ class FileManagerService
         }
 
         $disk = static::getNasDisk();
-        $directory = date('Y/m');
+
+        // Path baru: {NamaUser}/{YYYY/MM}/{uuid}.{ext}
+        $userDir = static::getUserNasDirectory($user);
+        $monthDir = date('Y/m');
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $directory = $userDir . '/' . $monthDir;
         $path = $file->storeAs($directory, $filename, $disk);
+
+        // Auto-deteksi kategori jika tidak dipilih secara manual
+        if ($categoryId === null) {
+            $categoryId = static::detectCategoryByExtension($file->getClientOriginalExtension());
+        }
 
         $document = Document::create([
             'folder_id' => $folderId,

@@ -38,6 +38,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Drive & Folders
     Route::get('/drive/{folder?}', [FolderController::class, 'index'])->name('drive.index');
     Route::post('/folders', [FolderController::class, 'store'])->name('folders.store');
+    Route::post('/folders/create-ajax', [FolderController::class, 'createAjax'])->name('folders.create-ajax');
     Route::put('/folders/{folder}', [FolderController::class, 'update'])->name('folders.update');
     Route::post('/folders/{folder}/move', [FolderController::class, 'move'])->name('folders.move');
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('folders.destroy');

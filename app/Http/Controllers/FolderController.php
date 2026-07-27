@@ -49,6 +49,27 @@ class FolderController extends Controller
         return back()->with('success', 'Folder created successfully.');
     }
 
+    /**
+     * Membuat folder via AJAX dan mengembalikan folder_id (digunakan saat drag & drop folder).
+     */
+    public function createAjax(Request $request)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'parent_id' => 'nullable|exists:folders,id',
+        ]);
+
+        $folder = FolderService::create([
+            'nama' => $request->nama,
+            'parent_id' => $request->parent_id,
+        ], $request->user(), $request);
+
+        return response()->json([
+            'id' => $folder->id,
+            'nama' => $folder->nama,
+        ]);
+    }
+
     public function update(Request $request, Folder $folder)
     {
         $request->validate(['nama' => 'required|string|max:255']);
