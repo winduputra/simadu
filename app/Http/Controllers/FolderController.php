@@ -28,11 +28,15 @@ class FolderController extends Controller
                 abort(403, 'You do not have access to this folder.');
             }
 
-            $folders = Folder::where('parent_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
-            $documents = Document::where('folder_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $folders = Folder::with(['publicLinks' => fn($q) => $q->where('is_active', true), 'shares.sharedTo', 'shares.sharedBy'])
+                ->where('parent_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $documents = Document::with(['publicLinks' => fn($q) => $q->where('is_active', true), 'shares.sharedTo', 'shares.sharedBy'])
+                ->where('folder_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
         } else {
-            $folders = Folder::where('user_id', $user->id)->whereNull('parent_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
-            $documents = Document::where('user_id', $user->id)->whereNull('folder_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $folders = Folder::with(['publicLinks' => fn($q) => $q->where('is_active', true), 'shares.sharedTo', 'shares.sharedBy'])
+                ->where('user_id', $user->id)->whereNull('parent_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $documents = Document::with(['publicLinks' => fn($q) => $q->where('is_active', true), 'shares.sharedTo', 'shares.sharedBy'])
+                ->where('user_id', $user->id)->whereNull('folder_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
         }
 
         $breadcrumbs = $folder ? array_merge($folder->ancestors(), [$folder]) : [];

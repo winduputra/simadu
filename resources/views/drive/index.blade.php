@@ -10,7 +10,17 @@
         shareItemType: 'folder',
         shareItemId: null,
         shareItemName: '',
+        sharePublicLinks: [],
+        shareInternalShares: [],
         shareTab: 'internal',
+        openShareModal(type, id, name, publicLinks = [], shares = []) {
+            this.shareItemType = type;
+            this.shareItemId = id;
+            this.shareItemName = name;
+            this.sharePublicLinks = publicLinks;
+            this.shareInternalShares = shares;
+            this.showShareModal = true;
+        },
         activeFolderId: null,
         activeFolderName: '',
         activeFileId: null,
@@ -19,14 +29,16 @@
         allFolders: @js($folders),
         isDragging: false,
         uploads: [],
-        contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '' },
-        openContextMenu(e, type, id, name) {
+        contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '', publicLinks: [], shares: [] },
+        openContextMenu(e, type, id, name, publicLinks = [], shares = []) {
             this.contextMenu.show = true;
             this.contextMenu.x = e.clientX;
             this.contextMenu.y = e.clientY;
             this.contextMenu.type = type;
             this.contextMenu.id = id;
             this.contextMenu.name = name;
+            this.contextMenu.publicLinks = publicLinks;
+            this.contextMenu.shares = shares;
         },
         async handleDrop(e) {
             this.isDragging = false;
@@ -162,6 +174,25 @@
                 <p class="font-medium mt-1">File akan diunggah otomatis ke folder ini</p>
             </div>
         </div>
+        <!-- Public Link Success Notification Banner -->
+        @if(session('public_link_url'))
+            <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg flex items-center justify-between" x-data="{ copied: false }">
+                <div class="flex items-center space-x-3 truncate mr-4">
+                    <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    </div>
+                    <div class="truncate">
+                        <p class="text-xs text-indigo-100 font-medium">Public Link Berhasil Dibuat!</p>
+                        <p class="text-sm font-bold truncate">{{ session('public_link_url') }}</p>
+                    </div>
+                </div>
+                <button @click="navigator.clipboard.writeText('{{ session('public_link_url') }}'); copied = true; setTimeout(() => copied = false, 2000)" class="px-4 py-2 bg-white text-indigo-600 hover:bg-indigo-50 text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                    <span x-text="copied ? 'Berhasil Di-copy!' : 'Copy Link'">Copy Link</span>
+                </button>
+            </div>
+        @endif
+
         <!-- Drive Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -197,7 +228,7 @@
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Folders</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 @foreach($folders as $f)
-                    <div @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, '{{ addslashes($f->nama) }}')" class="group bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
+                    <div @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, '{{ addslashes($f->nama) }}', {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="group bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
                         <a href="{{ route('drive.index', $f->id) }}" class="flex items-center space-x-3 truncate flex-1 mr-2">
                             <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -213,7 +244,7 @@
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                             </button>
                             <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
-                                <button @click="open = false; shareItemType = 'folder'; shareItemId = {{ $f->id }}; shareItemName = '{{ addslashes($f->nama) }}'; showShareModal = true" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                                <button @click="open = false; openShareModal('folder', {{ $f->id }}, '{{ addslashes($f->nama) }}', {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
                                     Share & Links
                                 </button>
                                 <button @click="open = false; activeFolderId = {{ $f->id }}; activeFolderName = '{{ $f->nama }}'; showRenameFolder = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
@@ -264,7 +295,7 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach($documents as $doc)
-                                    <tr @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, '{{ addslashes($doc->nama) }}')" class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700 cursor-context-menu">
+                                    <tr @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, '{{ addslashes($doc->nama) }}', {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700 cursor-context-menu">
                                         <td class="py-4 px-6 font-semibold text-slate-800">
                                             <div class="flex items-center space-x-3">
                                                 <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
@@ -308,7 +339,7 @@
                                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                                                     </button>
                                                     <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
-                                                        <button @click="open = false; shareItemType = 'document'; shareItemId = {{ $doc->id }}; shareItemName = '{{ addslashes($doc->nama) }}'; showShareModal = true" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                                                        <button @click="open = false; openShareModal('document', {{ $doc->id }}, '{{ addslashes($doc->nama) }}', {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
                                                             Share & Links
                                                         </button>
                                                         <a href="{{ route('documents.show', $doc->id) }}" class="w-full block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
@@ -474,7 +505,7 @@
                 </div>
 
                 <!-- Tab 1: Internal Share -->
-                <div x-show="shareTab === 'internal'" class="space-y-4">
+                <div x-show="shareTab === 'internal'" class="space-y-6">
                     <form action="{{ route('shares.store') }}" method="POST" class="space-y-4">
                         @csrf
                         <input type="hidden" name="shareable_type" :value="shareItemType">
@@ -521,10 +552,34 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Active Internal Shares -->
+                    <template x-if="shareInternalShares && shareInternalShares.length > 0">
+                        <div class="space-y-2 border-t border-slate-100 pt-4">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Internal Shares</h4>
+                            <div class="space-y-2 max-h-36 overflow-y-auto">
+                                <template x-for="s in shareInternalShares" :key="s.id">
+                                    <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+                                        <div>
+                                            <span class="font-semibold text-slate-700 block" x-text="s.recipient"></span>
+                                            <span class="text-[10px] text-slate-400 uppercase tracking-wide font-medium" x-text="s.permission"></span>
+                                        </div>
+                                        <form :action="`/shares/${s.id}`" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-rose-500 hover:text-rose-700 p-1 font-semibold hover:bg-rose-50 rounded-lg transition-colors">
+                                                Unshare
+                                            </button>
+                                        </form>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Tab 2: Public Link -->
-                <div x-show="shareTab === 'public'" class="space-y-4">
+                <div x-show="shareTab === 'public'" class="space-y-6">
                     <form action="{{ route('public-links.store') }}" method="POST" class="space-y-4">
                         @csrf
                         <input type="hidden" name="linkable_type" :value="shareItemType">
@@ -561,6 +616,40 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- Active Public Links List with Copy Button -->
+                    <template x-if="sharePublicLinks && sharePublicLinks.length > 0">
+                        <div class="space-y-2 border-t border-slate-100 pt-4">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Public Links</h4>
+                            <div class="space-y-2 max-h-40 overflow-y-auto">
+                                <template x-for="link in sharePublicLinks" :key="link.id">
+                                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2" x-data="{ linkCopied: false }">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded-md uppercase" x-text="link.permission"></span>
+                                                <template x-if="link.has_password">
+                                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-700 font-semibold text-[10px] rounded-md">Password</span>
+                                                </template>
+                                            </div>
+                                            <form :action="`/public-links/${link.id}`" method="POST" onsubmit="return confirm('Revoke this public link?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-rose-500 hover:text-rose-700 text-xs font-semibold hover:underline">
+                                                    Revoke
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-2">
+                                            <span class="text-xs font-mono text-slate-600 truncate mr-2" x-text="link.url"></span>
+                                            <button @click="navigator.clipboard.writeText(link.url); linkCopied = true; setTimeout(() => linkCopied = false, 2000)" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md transition-all shrink-0">
+                                                <span x-text="linkCopied ? 'Copied!' : 'Copy Link'">Copy Link</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -648,7 +737,7 @@
             
             <template x-if="contextMenu.type === 'folder'">
                 <div>
-                    <button @click="shareItemType = 'folder'; shareItemId = contextMenu.id; shareItemName = contextMenu.name; showShareModal = true; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                    <button @click="openShareModal('folder', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                         Share & Links
                     </button>
@@ -670,7 +759,7 @@
             
             <template x-if="contextMenu.type === 'file'">
                 <div>
-                    <button @click="shareItemType = 'document'; shareItemId = contextMenu.id; shareItemName = contextMenu.name; showShareModal = true; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                    <button @click="openShareModal('document', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                         Share & Links
                     </button>

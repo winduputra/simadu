@@ -17,6 +17,8 @@ class PublicLink extends Model
 
     protected $hidden = ['password'];
 
+    protected $appends = ['url'];
+
     protected function casts(): array
     {
         return [
@@ -25,6 +27,11 @@ class PublicLink extends Model
             'expires_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function getUrlAttribute(): string
+    {
+        return route('public.access', $this->token);
     }
 
     public function linkable(): MorphTo
