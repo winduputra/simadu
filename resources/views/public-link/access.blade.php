@@ -54,15 +54,57 @@
                 </div>
             </div>
 
-            <!-- Actions block -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                @if($isDoc && $link->permission === 'editor')
-                    <a href="{{ route('public.download', $link->token) }}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
-                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Download File
-                    </a>
-                @endif
-            </div>
+            <!-- Actions / Contents block -->
+            @if($isDoc)
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    @if($link->permission === 'editor')
+                        <a href="{{ route('public.download', $link->token) }}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download File
+                        </a>
+                    @endif
+                </div>
+            @else
+                <div class="text-left space-y-4">
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Isi Folder</h3>
+                        @php
+                            $subfolders = \App\Models\Folder::where('parent_id', $item->id)->orderBy('nama')->get();
+                            $subdocs = \App\Models\Document::where('folder_id', $item->id)->orderBy('nama')->get();
+                        @endphp
+
+                        @if($subfolders->isEmpty() && $subdocs->isEmpty())
+                            <p class="text-slate-400 text-xs text-center py-4">Folder ini kosong.</p>
+                        @else
+                            <div class="divide-y divide-slate-100">
+                                @foreach($subfolders as $sf)
+                                    <div class="py-2.5 flex items-center justify-between">
+                                        <div class="flex items-center space-x-2 truncate">
+                                            <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                            <span class="font-medium text-slate-700 text-xs truncate">{{ $sf->nama }}</span>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 uppercase font-medium">Folder</span>
+                                    </div>
+                                @endforeach
+                                @foreach($subdocs as $sd)
+                                    <div class="py-2.5 flex items-center justify-between">
+                                        <div class="flex items-center space-x-2 truncate max-w-[65%]">
+                                            <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                            <span class="font-medium text-slate-700 text-xs truncate" title="{{ $sd->nama_file_asli }}">{{ $sd->nama_file_asli }}</span>
+                                        </div>
+                                        <div class="flex items-center space-x-3 shrink-0">
+                                            <span class="text-[10px] text-slate-400">{{ $sd->formattedSize() }}</span>
+                                            @if($link->permission === 'editor')
+                                                <a href="{{ route('public.download-file', ['token' => $link->token, 'document' => $sd->id]) }}" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">Download</a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             <div class="text-[10px] text-slate-400">
                 Powered by SIMADU Document System

@@ -24,6 +24,7 @@ Route::group([], function() {
     Route::get('/s/{token}', [PublicLinkController::class, 'access'])->name('public.access');
     Route::post('/s/{token}/verify', [PublicLinkController::class, 'verifyPassword'])->name('public.verify');
     Route::get('/s/{token}/download', [PublicLinkController::class, 'download'])->name('public.download');
+    Route::get('/s/{token}/document/{document}/download', [PublicLinkController::class, 'downloadDocument'])->name('public.download-file');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {

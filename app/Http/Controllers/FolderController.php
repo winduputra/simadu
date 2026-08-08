@@ -14,25 +14,33 @@ class FolderController extends Controller
     {
         $user = $request->user();
 
-        $query = Folder::where('user_id', $user->id);
         if ($folder) {
-            $query->where('parent_id', $folder->id);
-        } else {
-            $query->whereNull('parent_id');
-        }
-        $folders = $query->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $hasAccess = $folder->user_id === $user->id || $user->isSuperAdmin() || \App\Services\ShareService::getPermission($folder, $user) !== null;
+            if (!$hasAccess) {
+                foreach ($folder->ancestors() as $ancestor) {
+                    if (\App\Services\ShareService::getPermission($ancestor, $user) !== null) {
+                        $hasAccess = true;
+                        break;
+                    }
+                }
+            }
+            if (!$hasAccess) {
+                abort(403, 'You do not have access to this folder.');
+            }
 
-        $docQuery = Document::where('user_id', $user->id);
-        if ($folder) {
-            $docQuery->where('folder_id', $folder->id);
+            $folders = Folder::where('parent_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $documents = Document::where('folder_id', $folder->id)->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
         } else {
-            $docQuery->whereNull('folder_id');
+            $folders = Folder::where('user_id', $user->id)->whereNull('parent_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
+            $documents = Document::where('user_id', $user->id)->whereNull('folder_id')->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
         }
-        $documents = $docQuery->orderBy('is_pinned', 'desc')->orderBy('nama')->get();
 
         $breadcrumbs = $folder ? array_merge($folder->ancestors(), [$folder]) : [];
 
-        return view('drive.index', compact('folders', 'documents', 'folder', 'breadcrumbs', 'user'));
+        $users = \App\Models\User::where('id', '!=', $user->id)->orderBy('nama')->get();
+        $unitKerjas = \App\Models\UnitKerja::orderBy('nama')->get();
+
+        return view('drive.index', compact('folders', 'documents', 'folder', 'breadcrumbs', 'user', 'users', 'unitKerjas'));
     }
 
     public function store(Request $request)

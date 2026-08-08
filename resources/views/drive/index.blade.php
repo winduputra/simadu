@@ -6,6 +6,11 @@
         showRenameFolder: false, 
         showRenameFile: false,
         showMove: false,
+        showShareModal: false,
+        shareItemType: 'folder',
+        shareItemId: null,
+        shareItemName: '',
+        shareTab: 'internal',
         activeFolderId: null,
         activeFolderName: '',
         activeFileId: null,
@@ -208,6 +213,9 @@
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                             </button>
                             <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
+                                <button @click="open = false; shareItemType = 'folder'; shareItemId = {{ $f->id }}; shareItemName = '{{ addslashes($f->nama) }}'; showShareModal = true" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                                    Share & Links
+                                </button>
                                 <button @click="open = false; activeFolderId = {{ $f->id }}; activeFolderName = '{{ $f->nama }}'; showRenameFolder = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                     Rename
                                 </button>
@@ -300,8 +308,11 @@
                                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                                                     </button>
                                                     <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
+                                                        <button @click="open = false; shareItemType = 'document'; shareItemId = {{ $doc->id }}; shareItemName = '{{ addslashes($doc->nama) }}'; showShareModal = true" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                                                            Share & Links
+                                                        </button>
                                                         <a href="{{ route('documents.show', $doc->id) }}" class="w-full block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                                            Details & Sharing
+                                                            Details
                                                         </a>
                                                         <button @click="open = false; activeFileId = {{ $doc->id }}; activeFileName = '{{ $doc->nama }}'; showRenameFile = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                                             Rename
@@ -439,6 +450,121 @@
             </div>
         </div>
 
+        <!-- Share Item Modal -->
+        <div x-show="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
+            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6" @click.away="showShareModal = false">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800" x-text="`Share ${shareItemType === 'folder' ? 'Folder' : 'File'}`"></h3>
+                        <p class="text-xs text-slate-500 font-medium truncate max-w-xs mt-0.5" x-text="shareItemName"></p>
+                    </div>
+                    <button @click="showShareModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="flex border-b border-slate-100">
+                    <button @click="shareTab = 'internal'" class="pb-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all" :class="shareTab === 'internal' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'">
+                        Internal Share
+                    </button>
+                    <button @click="shareTab = 'public'" class="pb-2 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all" :class="shareTab === 'public' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'">
+                        Public Link
+                    </button>
+                </div>
+
+                <!-- Tab 1: Internal Share -->
+                <div x-show="shareTab === 'internal'" class="space-y-4">
+                    <form action="{{ route('shares.store') }}" method="POST" class="space-y-4">
+                        @csrf
+                        <input type="hidden" name="shareable_type" :value="shareItemType">
+                        <input type="hidden" name="shareable_id" :value="shareItemId">
+
+                        <div class="grid grid-cols-2 gap-3" x-data="{ targetType: 'user' }">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Share Target</label>
+                                <select name="shared_to_type" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500" x-model="targetType">
+                                    <option value="user">Specific User</option>
+                                    <option value="unit">Unit Kerja</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Permission</label>
+                                <select name="permission" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                                    <option value="viewer">Viewer (Read Only)</option>
+                                    <option value="editor">Editor (Upload/Edit)</option>
+                                    <option value="manager">Manager (Full Access)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Select Recipient</label>
+                                <select name="shared_to_id" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                                    <template x-if="targetType === 'user'">
+                                        @foreach($users as $u)
+                                            <option value="{{ $u->id }}">{{ $u->nama }} ({{ $u->email }})</option>
+                                        @endforeach
+                                    </template>
+                                    <template x-if="targetType === 'unit'">
+                                        @foreach($unitKerjas as $uk)
+                                            <option value="{{ $uk->id }}">{{ $uk->nama }}</option>
+                                        @endforeach
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                                Share Item
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab 2: Public Link -->
+                <div x-show="shareTab === 'public'" class="space-y-4">
+                    <form action="{{ route('public-links.store') }}" method="POST" class="space-y-4">
+                        @csrf
+                        <input type="hidden" name="linkable_type" :value="shareItemType">
+                        <input type="hidden" name="linkable_id" :value="shareItemId">
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Permission</label>
+                                <select name="permission" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                                    <option value="viewer">Viewer (View Only)</option>
+                                    <option value="editor">Editor (Allow Download/Upload)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Password (Optional)</label>
+                                <input type="password" name="password" placeholder="Leave blank for none" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Expiration (Optional)</label>
+                                <input type="datetime-local" name="expires_at" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Max Access Count</label>
+                                <input type="number" name="max_access_count" min="1" placeholder="Unlimited" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                                Create Public Link
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Move Modal -->
         <div x-show="showMove" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
             <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showMove = false">
@@ -522,6 +648,10 @@
             
             <template x-if="contextMenu.type === 'folder'">
                 <div>
+                    <button @click="shareItemType = 'folder'; shareItemId = contextMenu.id; shareItemName = contextMenu.name; showShareModal = true; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                        <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                        Share & Links
+                    </button>
                     <button @click="showRenameFolder = true; activeFolderId = contextMenu.id; activeFolderName = contextMenu.name; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         Rename
@@ -540,9 +670,13 @@
             
             <template x-if="contextMenu.type === 'file'">
                 <div>
+                    <button @click="shareItemType = 'document'; shareItemId = contextMenu.id; shareItemName = contextMenu.name; showShareModal = true; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                        <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                        Share & Links
+                    </button>
                     <a :href="`/documents/${contextMenu.id}`" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Details & Sharing
+                        Details
                     </a>
                     <a :href="`/documents/${contextMenu.id}/preview`" target="_blank" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>

@@ -97,4 +97,27 @@ class PublicLinkController extends Controller
         $disk = \App\Services\FileManagerService::getNasDisk();
         return Storage::disk($disk)->download($item->storage_path, $item->nama_file_asli);
     }
+
+    public function downloadDocument(string $token, Document $document)
+    {
+        $link = PublicLinkService::findByToken($token);
+        if (!$link || !$link->isAccessible() || $link->permission === 'viewer') {
+            abort(403);
+        }
+
+        $item = $link->linkable;
+        if ($item instanceof Folder) {
+            $isChild = $document->folder_id === $item->id || in_array($item->id, array_column($document->folder?->ancestors() ?? [], 'id'));
+            if (!$isChild) {
+                abort(403, 'Document does not belong to this shared folder.');
+            }
+        } elseif ($item instanceof Document) {
+            if ($item->id !== $document->id) {
+                abort(403);
+            }
+        }
+
+        $disk = \App\Services\FileManagerService::getNasDisk();
+        return Storage::disk($disk)->download($document->storage_path, $document->nama_file_asli);
+    }
 }
