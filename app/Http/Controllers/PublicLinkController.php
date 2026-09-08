@@ -98,6 +98,25 @@ class PublicLinkController extends Controller
         return Storage::disk($disk)->download($item->storage_path, $item->nama_file_asli);
     }
 
+    public function stream(string $token)
+    {
+        $link = PublicLinkService::findByToken($token);
+        if (!$link || !$link->isAccessible()) {
+            abort(403);
+        }
+
+        if ($link->has_password && !session('public_link_verified_' . $link->id)) {
+            abort(403);
+        }
+
+        $item = $link->linkable;
+        if (!($item instanceof Document)) {
+            abort(400, 'Cannot preview a folder.');
+        }
+
+        return $this->streamFile($item);
+    }
+
     public function downloadDocument(string $token, Document $document)
     {
         $link = PublicLinkService::findByToken($token);
@@ -119,5 +138,43 @@ class PublicLinkController extends Controller
 
         $disk = \App\Services\FileManagerService::getNasDisk();
         return Storage::disk($disk)->download($document->storage_path, $document->nama_file_asli);
+    }
+
+    public function streamDocument(string $token, Document $document)
+    {
+        $link = PublicLinkService::findByToken($token);
+        if (!$link || !$link->isAccessible()) {
+            abort(403);
+        }
+
+        if ($link->has_password && !session('public_link_verified_' . $link->id)) {
+            abort(403);
+        }
+
+        $item = $link->linkable;
+        if (!($item instanceof Folder)) {
+            abort(403);
+        }
+
+        $isChild = $document->folder_id === $item->id || in_array($item->id, array_column($document->folder?->ancestors() ?? [], 'id'));
+        if (!$isChild) {
+            abort(403, 'Document does not belong to this shared folder.');
+        }
+
+        return $this->streamFile($document);
+    }
+
+    private function streamFile(Document $document)
+    {
+        $disk = \App\Services\FileManagerService::getNasDisk();
+        if (!Storage::disk($disk)->exists($document->storage_path)) {
+            abort(404, 'File not found on storage.');
+        }
+
+        return Storage::disk($disk)->response($document->storage_path, $document->nama_file_asli, [
+            'Content-Type' => $document->mime_type,
+            'Content-Disposition' => 'inline; filename="' . addslashes($document->nama_file_asli) . '"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

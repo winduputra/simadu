@@ -9,8 +9,8 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen p-6">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-xl p-8 shadow-xl text-center space-y-6">
+    <body class="font-sans antialiased bg-slate-50 text-slate-800 min-h-screen p-6">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-5xl mx-auto p-8 shadow-xl text-center space-y-6">
             @php
                 $item = $link->linkable;
                 $isDoc = $item instanceof \App\Models\Document;
@@ -56,6 +56,13 @@
 
             <!-- Actions / Contents block -->
             @if($isDoc)
+                @include('components.document-viewer', [
+                    'document' => $item,
+                    'streamUrl' => route('public.stream', $link->token),
+                    'downloadUrl' => route('public.download', $link->token),
+                    'canDownload' => $link->permission === 'editor',
+                ])
+
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
                     @if($link->permission === 'editor')
                         <a href="{{ route('public.download', $link->token) }}" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
@@ -94,6 +101,9 @@
                                         </div>
                                         <div class="flex items-center space-x-3 shrink-0">
                                             <span class="text-[10px] text-slate-400">{{ $sd->formattedSize() }}</span>
+                                            @if($sd->isPreviewable())
+                                                <a href="{{ route('public.stream-file', ['token' => $link->token, 'document' => $sd->id]) }}" target="_blank" class="text-slate-600 hover:text-indigo-800 text-xs font-semibold">Preview</a>
+                                            @endif
                                             @if($link->permission === 'editor')
                                                 <a href="{{ route('public.download-file', ['token' => $link->token, 'document' => $sd->id]) }}" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">Download</a>
                                             @endif

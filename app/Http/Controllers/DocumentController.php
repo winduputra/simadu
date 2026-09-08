@@ -66,14 +66,28 @@ class DocumentController extends Controller
 
     public function preview(Request $request, Document $document)
     {
+        ActivityLogService::log($request->user()->id, 'preview', $document, null, $request);
+
+        return view('document.preview', [
+            'document' => $document,
+            'streamUrl' => route('documents.stream', $document),
+            'downloadUrl' => route('documents.download', $document),
+            'canDownload' => true,
+        ]);
+    }
+
+    public function stream(Document $document)
+    {
         $disk = FileManagerService::getNasDisk();
         if (!Storage::disk($disk)->exists($document->storage_path)) {
             abort(404, 'File not found on storage.');
         }
 
-        ActivityLogService::log($request->user()->id, 'preview', $document, null, $request);
-
-        return Storage::disk($disk)->response($document->storage_path, $document->nama_file_asli);
+        return Storage::disk($disk)->response($document->storage_path, $document->nama_file_asli, [
+            'Content-Type' => $document->mime_type,
+            'Content-Disposition' => 'inline; filename="' . addslashes($document->nama_file_asli) . '"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function rename(Request $request, Document $document)

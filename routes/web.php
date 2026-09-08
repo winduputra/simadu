@@ -23,7 +23,9 @@ Route::get('/', function () {
 Route::group([], function() {
     Route::get('/s/{token}', [PublicLinkController::class, 'access'])->name('public.access');
     Route::post('/s/{token}/verify', [PublicLinkController::class, 'verifyPassword'])->name('public.verify');
+    Route::get('/s/{token}/stream', [PublicLinkController::class, 'stream'])->name('public.stream');
     Route::get('/s/{token}/download', [PublicLinkController::class, 'download'])->name('public.download');
+    Route::get('/s/{token}/document/{document}/stream', [PublicLinkController::class, 'streamDocument'])->name('public.stream-file');
     Route::get('/s/{token}/document/{document}/download', [PublicLinkController::class, 'downloadDocument'])->name('public.download-file');
 });
 
@@ -49,6 +51,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
     Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])->name('documents.preview');
+    Route::get('/documents/{document}/stream', [DocumentController::class, 'stream'])->name('documents.stream');
     Route::put('/documents/{document}', [DocumentController::class, 'rename'])->name('documents.rename');
     Route::post('/documents/{document}/move', [DocumentController::class, 'move'])->name('documents.move');
     Route::post('/documents/{document}/category', [DocumentController::class, 'updateCategory'])->name('documents.category.update');
