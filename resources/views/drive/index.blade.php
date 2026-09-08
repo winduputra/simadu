@@ -281,8 +281,8 @@
                     <p class="text-slate-400 text-sm mt-1">Click "Upload Files" to add files.</p>
                 </div>
             @else
-                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-visible">
+                    <div class="w-full overflow-visible">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
@@ -338,7 +338,7 @@
                                                     <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none">
                                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                                                     </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
+                                                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-[90]">
                                                         <button @click="open = false; openShareModal('document', {{ $doc->id }}, '{{ addslashes($doc->nama) }}', {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
                                                             Share & Links
                                                         </button>
@@ -580,6 +580,47 @@
 
                 <!-- Tab 2: Public Link -->
                 <div x-show="shareTab === 'public'" class="space-y-6">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Public Links</h4>
+                            <span class="text-[11px] text-slate-400" x-text="`${sharePublicLinks.length} link aktif`"></span>
+                        </div>
+
+                        <template x-if="sharePublicLinks && sharePublicLinks.length > 0">
+                            <div class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                                <template x-for="link in sharePublicLinks" :key="link.id">
+                                    <div class="p-3 bg-emerald-50 border border-emerald-100 rounded-xl space-y-2" x-data="{ linkCopied: false }">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <span class="px-2 py-0.5 bg-emerald-600 text-white font-bold text-[10px] rounded-md uppercase" x-text="link.permission"></span>
+                                                <template x-if="link.has_password">
+                                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-700 font-semibold text-[10px] rounded-md">Password</span>
+                                                </template>
+                                            </div>
+                                            <form :action="`/public-links/${link.id}`" method="POST" onsubmit="return confirm('Revoke this public link?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-rose-500 hover:text-rose-700 text-xs font-semibold hover:underline">Revoke</button>
+                                            </form>
+                                        </div>
+                                        <div class="flex items-center gap-2 bg-white border border-emerald-200 rounded-lg p-2">
+                                            <input type="text" readonly class="w-full min-w-0 text-xs font-mono text-slate-700 bg-transparent focus:outline-none" :value="link.url" @focus="$el.select()">
+                                            <button @click="navigator.clipboard.writeText(link.url); linkCopied = true; setTimeout(() => linkCopied = false, 2000)" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md transition-all shrink-0">
+                                                <span x-text="linkCopied ? 'Copied!' : 'Copy'">Copy</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="!sharePublicLinks || sharePublicLinks.length === 0">
+                            <div class="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
+                                Belum ada public link aktif untuk item ini.
+                            </div>
+                        </template>
+                    </div>
+
                     <form action="{{ route('public-links.store') }}" method="POST" class="space-y-4">
                         @csrf
                         <input type="hidden" name="linkable_type" :value="shareItemType">
@@ -617,39 +658,6 @@
                         </div>
                     </form>
 
-                    <!-- Active Public Links List with Copy Button -->
-                    <template x-if="sharePublicLinks && sharePublicLinks.length > 0">
-                        <div class="space-y-2 border-t border-slate-100 pt-4">
-                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Public Links</h4>
-                            <div class="space-y-2 max-h-40 overflow-y-auto">
-                                <template x-for="link in sharePublicLinks" :key="link.id">
-                                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2" x-data="{ linkCopied: false }">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center space-x-2">
-                                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold text-[10px] rounded-md uppercase" x-text="link.permission"></span>
-                                                <template x-if="link.has_password">
-                                                    <span class="px-2 py-0.5 bg-amber-100 text-amber-700 font-semibold text-[10px] rounded-md">Password</span>
-                                                </template>
-                                            </div>
-                                            <form :action="`/public-links/${link.id}`" method="POST" onsubmit="return confirm('Revoke this public link?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-rose-500 hover:text-rose-700 text-xs font-semibold hover:underline">
-                                                    Revoke
-                                                </button>
-                                            </form>
-                                        </div>
-                                        <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-2">
-                                            <span class="text-xs font-mono text-slate-600 truncate mr-2" x-text="link.url"></span>
-                                            <button @click="navigator.clipboard.writeText(link.url); linkCopied = true; setTimeout(() => linkCopied = false, 2000)" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md transition-all shrink-0">
-                                                <span x-text="linkCopied ? 'Copied!' : 'Copy Link'">Copy Link</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
                 </div>
             </div>
         </div>

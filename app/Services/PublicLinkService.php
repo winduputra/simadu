@@ -20,7 +20,7 @@ class PublicLinkService
         ?Request $request = null
     ): PublicLink {
         $link = PublicLink::create([
-            'linkable_type' => get_class($item),
+            'linkable_type' => $item->getMorphClass(),
             'linkable_id' => $item->id,
             'user_id' => $user->id,
             'token' => Str::random(64),
