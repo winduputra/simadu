@@ -652,7 +652,7 @@
                         </div>
 
                         <div class="flex justify-end">
-                            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                            <button type="submit" class="px-4 py-2 !bg-emerald-600 hover:!bg-emerald-700 !text-white text-xs font-semibold rounded-xl shadow-sm transition-all disabled:!bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60">
                                 Create Public Link
                             </button>
                         </div>
