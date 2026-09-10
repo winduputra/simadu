@@ -12,6 +12,8 @@ use Illuminate\Validation\Rules;
 
 class UserController extends Controller
 {
+    private const BYTES_PER_GB = 1073741824;
+
     public function index(Request $request)
     {
         $query = User::with(['role', 'unitKerja'])->latest();
@@ -38,14 +40,14 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nip' => 'required|string|max:18|unique:users',
             'nama' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
             'unit_kerja_id' => 'nullable|exists:unit_kerjas,id',
-            'storage_quota' => 'required|integer|min:0',
+            'storage_quota_gb' => 'required|integer|min:0|max:8589934591',
         ]);
 
         User::create([
@@ -55,7 +57,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role_id' => $request->role_id,
             'unit_kerja_id' => $request->unit_kerja_id,
-            'storage_quota' => $request->storage_quota,
+            'storage_quota' => $validated['storage_quota_gb'] * self::BYTES_PER_GB,
             'is_active' => true,
         ]);
 

@@ -1,9 +1,9 @@
 <x-app-layout>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <div class="space-y-8 relative min-h-[500px]" x-data="{ 
-        showCreateFolder: false, 
-        showUpload: false, 
-        showRenameFolder: false, 
+    <div class="space-y-8 relative min-h-[500px]" x-data="{
+        showCreateFolder: false,
+        showUpload: false,
+        showRenameFolder: false,
         showRenameFile: false,
         showMove: false,
         showShareModal: false,
@@ -63,7 +63,7 @@
         },
         openContextMenu(e, type, id, name, publicLinks = [], shares = []) {
             this.contextMenu.show = true;
-            this.contextMenu.returnFocus = e.currentTarget.querySelector('[x-ref="actionsTrigger"]');
+            this.contextMenu.returnFocus = e.currentTarget.querySelector('[x-ref=&quot;actionsTrigger&quot;]');
             this.contextMenu.x = Math.max(this.contextMenuMargin, Math.min(e.clientX, window.innerWidth - this.contextMenuWidth - this.contextMenuMargin));
             this.contextMenu.y = Math.max(this.contextMenuMargin, Math.min(e.clientY, window.innerHeight - this.contextMenuHeight - this.contextMenuMargin));
             this.contextMenu.type = type;
@@ -148,11 +148,11 @@
             let controller = new AbortController();
             let upload = { id: uploadId, name: file.name, progress: 0, status: 'uploading', error: null, controller: controller };
             this.uploads.push(upload);
-            
+
             let formData = new FormData();
             formData.append('files[]', file);
             if (folderId) formData.append('folder_id', folderId);
-            
+
             axios.post('{{ route('documents.upload') }}', formData, {
                 signal: controller.signal,
                 headers: { 'Content-Type': 'multipart/form-data', 'Accept': 'application/json' },
@@ -198,15 +198,15 @@
             });
             this.uploads = [];
         }
-    }" 
-    @click="contextMenu.show = false" 
+    }"
+    @click="contextMenu.show = false"
     @contextmenu.prevent="contextMenu.show = false"
-    @dragover.prevent="isDragging = true" 
-    @dragleave.prevent="isDragging = false" 
+    @dragover.prevent="isDragging = true"
+    @dragleave.prevent="isDragging = false"
     @drop.prevent="handleDrop($event)"
     @focusin.window="containDialogFocus($event, $root)"
     @keydown.escape.window="closeDialogs(); closeContextMenu($nextTick)">
-        
+
         <!-- Drag and Drop Visual Overlay -->
         <div x-show="isDragging" x-transition class="absolute inset-0 z-50 bg-indigo-50/90 border-4 border-dashed border-indigo-500 rounded-2xl flex items-center justify-center pointer-events-none">
             <div class="text-center text-indigo-600">
@@ -257,7 +257,9 @@
                     New Folder
                 </button>
                 <button @click="showUpload = true" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/10 transition-all hover:bg-indigo-700 sm:w-auto">
-                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+<svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8.71,7.71,11,5.41V15a1,1,0,0,0,2,0V5.41l2.29,2.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42l-4-4a1,1,0,0,0-.33-.21,1,1,0,0,0-.76,0,1,1,0,0,0-.33.21l-4,4A1,1,0,1,0,8.71,7.71ZM21,12a1,1,0,0,0-1,1v6a1,1,0,0,1-1,1H5a1,1,0,0,1-1-1V13a1,1,0,0,0-2,0v6a3,3,0,0,0,3,3H19a3,3,0,0,0,3-3V13A1,1,0,0,0,21,12Z"/>
+</svg>
                     Upload Files
                 </button>
             </div>
@@ -340,8 +342,8 @@
                                         <p class="break-all text-xs text-slate-400">{{ $doc->nama_file_asli }}</p>
                                     </div>
                                 </div>
-                                <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                                    <div>
+                                <dl class="grid grid-cols-1 gap-2 rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-2 text-sm sm:grid-cols-3">
+                                    <div class="min-w-0 rounded-lg border border-slate-100 bg-gradient-to-br from-white to-indigo-50/60 px-3 py-2.5">
                                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Category</dt>
                                         <dd class="mt-1">
                                             @if($doc->documentCategory)
@@ -351,19 +353,25 @@
                                             @endif
                                         </dd>
                                     </div>
-                                    <div>
+                                    <div class="min-w-0 rounded-lg border border-slate-100 bg-gradient-to-br from-white to-slate-50 px-3 py-2.5">
                                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Size</dt>
                                         <dd class="mt-1 font-medium text-slate-600">{{ $doc->formattedSize() }}</dd>
                                     </div>
-                                    <div>
+                                    <div class="min-w-0 rounded-lg border border-slate-100 bg-gradient-to-br from-white to-emerald-50/50 px-3 py-2.5">
                                         <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Last Modified</dt>
                                         <dd class="mt-1 text-slate-500">{{ $doc->updated_at->diffForHumans() }}</dd>
                                     </div>
                                 </dl>
                                 <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3">
-                                    <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50" aria-label="Preview {{ $doc->nama }}">Preview</a>
-                                    <a href="{{ route('documents.download', $doc->id) }}" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50" aria-label="Download {{ $doc->nama }}">Download</a>
-                                    <button x-ref="actionsTrigger" type="button" @click="open = !open" :aria-expanded="open" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open file actions for {{ $doc->nama }}">More Actions</button>
+                                    <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-600 shadow-sm hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Preview {{ $doc->nama }}">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    </a>
+                                    <a href="{{ route('documents.download', $doc->id) }}" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 shadow-sm hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Download {{ $doc->nama }}">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    </a>
+                                    <button x-ref="actionsTrigger" type="button" @click="open = !open" :aria-expanded="open" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 shadow-sm hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open file actions for {{ $doc->nama }}">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                                    </button>
                                 </div>
                                 <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="grid grid-cols-1 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2">
                                     <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('document', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="min-h-10 rounded-lg px-3 text-left text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Share & Links</button>
@@ -833,14 +841,14 @@
         </div>
 
         <!-- Custom Right Click Context Menu -->
-        <div x-show="contextMenu.show" 
+        <div x-show="contextMenu.show"
              x-transition.opacity.duration.200ms
              class="fixed bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[100] w-48 overflow-hidden"
              :style="`left: ${contextMenu.x}px; top: ${contextMenu.y}px;`"
              @click.stop
              @keydown.escape.stop.prevent="closeContextMenu($nextTick)"
              x-cloak>
-            
+
             <template x-if="contextMenu.type === 'folder'">
                 <div>
                     <button @click="dialogReturnFocus = contextMenu.returnFocus; openShareModal('folder', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
@@ -862,7 +870,7 @@
                     </button>
                 </div>
             </template>
-            
+
             <template x-if="contextMenu.type === 'file'">
                 <div>
                     <button @click="dialogReturnFocus = contextMenu.returnFocus; openShareModal('document', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
