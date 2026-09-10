@@ -33,7 +33,7 @@
                         <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Role</label>
                         <select name="role_id" required class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             @foreach($roles as $r)
-                                <option value="{{ $r->id }}" {{ old('role_id') == $r->id ? 'selected' : '' }}>{{ $r->nama }}</option>
+                                <option value="{{ $r->id }}" {{ old('role_id', $roles->firstWhere('slug', 'user')?->id) == $r->id ? 'selected' : '' }}>{{ $r->nama }}</option>
                             @endforeach
                         </select>
                         @error('role_id') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
