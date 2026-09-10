@@ -6,11 +6,11 @@
         <title>Password Protected Link - SIMADU</title>
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-slate-50 text-slate-800 flex items-center justify-center min-h-screen p-6">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-8 shadow-xl text-center space-y-6">
+    <body class="flex min-h-screen items-center justify-center bg-slate-50 p-4 font-sans text-slate-800 antialiased sm:p-6">
+        <div class="w-full max-w-md space-y-6 rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-xl sm:p-8">
             <!-- Icon -->
             <div class="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
                 <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>

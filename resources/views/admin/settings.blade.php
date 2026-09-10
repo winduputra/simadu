@@ -40,7 +40,7 @@
             <p class="text-slate-500 text-sm mt-1">Configure global infrastructure path for storage and default account quota.</p>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <form action="{{ route('admin.settings.store') }}" method="POST" class="space-y-6">
                 @csrf
                 <div class="space-y-6">
@@ -49,7 +49,7 @@
                         <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Synology NAS Local Path / Storage Path</label>
                         <div class="flex flex-col sm:flex-row gap-3">
                             <input type="text" name="nas_path" id="nas_path" required placeholder="e.g. C:\laragon\www\simadu\storage\app\documents" value="{{ old('nas_path', $nasPath) }}" class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <button type="button" @click="testPath()" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center min-w-[140px]" :disabled="testing">
+                            <button type="button" @click="testPath()" class="flex w-full shrink-0 items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 sm:w-auto sm:min-w-[140px]" :disabled="testing">
                                 <span x-show="!testing">Test Connection</span>
                                 <span x-show="testing" class="flex items-center">
                                     <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -87,7 +87,7 @@
                 </div>
 
                 <div class="flex justify-end pt-6 border-t border-slate-100">
-                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-600/10">
+                    <button type="submit" class="w-full rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/10 transition-all hover:bg-indigo-700 sm:w-auto">
                         Save System Settings
                     </button>
                 </div>

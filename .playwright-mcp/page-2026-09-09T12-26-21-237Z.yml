@@ -1,0 +1,201 @@
+- generic [ref=f1e2]:
+  - complementary [ref=f1e3]:
+    - link "S SIMADU" [ref=f1e5] [cursor=pointer]:
+      - /url: http://simadu.test/dashboard
+      - generic [ref=f1e6]: S
+      - generic [ref=f1e7]: SIMADU
+    - navigation [ref=f1e8]:
+      - generic [ref=f1e9]:
+        - text: My Storage
+        - generic [ref=f1e10]:
+          - link "Overview" [ref=f1e11] [cursor=pointer]:
+            - /url: http://simadu.test/dashboard
+          - link "My Drive" [ref=f1e14] [cursor=pointer]:
+            - /url: http://simadu.test/drive
+          - link "Shared with me" [ref=f1e17] [cursor=pointer]:
+            - /url: http://simadu.test/shared
+          - link "Trash" [ref=f1e20] [cursor=pointer]:
+            - /url: http://simadu.test/trash
+          - link "Activity Log" [ref=f1e23] [cursor=pointer]:
+            - /url: http://simadu.test/activity-log
+      - generic [ref=f1e26]:
+        - text: Administration
+        - generic [ref=f1e27]:
+          - link "Users" [ref=f1e28] [cursor=pointer]:
+            - /url: http://simadu.test/admin/users
+          - link "Unit Kerja" [ref=f1e31] [cursor=pointer]:
+            - /url: http://simadu.test/admin/unit-kerja
+          - link "Categories" [ref=f1e34] [cursor=pointer]:
+            - /url: http://simadu.test/admin/categories
+          - link "Settings" [ref=f1e37] [cursor=pointer]:
+            - /url: http://simadu.test/admin/settings
+    - generic [ref=f1e41]:
+      - generic [ref=f1e42]: Storage Quota
+      - generic [ref=f1e43]:
+        - generic [ref=f1e44]: 256.92 MB used
+        - generic [ref=f1e45]: Unlimited limit
+      - generic [ref=f1e48]: "Quota: Free tier / Unlimited"
+  - generic [ref=f1e49]:
+    - banner [ref=f1e50]:
+      - textbox "Search documents..." [ref=f1e53]
+      - button "Open user menu" [ref=f1e56] [cursor=pointer]:
+        - generic [ref=f1e57]: Su
+        - generic [ref=f1e58]:
+          - generic [ref=f1e59]: Super Admin
+          - generic [ref=f1e60]: Super Admin
+    - main [ref=f1e63]:
+      - generic [ref=f1e64]:
+        - generic [ref=f1e65]:
+          - generic [ref=f1e66]:
+            - heading "Dashboard" [level=1] [ref=f1e67]
+            - paragraph [ref=f1e68]: Overview of your documents, folders, and storage usage.
+          - link "Go to My Drive" [ref=f1e70] [cursor=pointer]:
+            - /url: http://simadu.test/drive
+        - generic [ref=f1e73]:
+          - generic [ref=f1e78]:
+            - generic [ref=f1e79]: Total Folders
+            - generic [ref=f1e80]: "5"
+          - generic [ref=f1e85]:
+            - generic [ref=f1e86]: Total Files
+            - generic [ref=f1e87]: "8"
+          - generic [ref=f1e88]:
+            - generic [ref=f1e93]:
+              - generic [ref=f1e94]: Storage Used
+              - generic [ref=f1e95]: 256.92 MB
+            - generic [ref=f1e97]:
+              - generic [ref=f1e98]: 0% used
+              - generic [ref=f1e99]: "Limit: Unlimited"
+        - generic [ref=f1e100]:
+          - generic [ref=f1e101]:
+            - heading "Recent Documents" [level=2] [ref=f1e102]
+            - link "View All" [ref=f1e103] [cursor=pointer]:
+              - /url: http://simadu.test/drive
+          - table [ref=f1e105]:
+            - rowgroup [ref=f1e106]:
+              - row [ref=f1e107]:
+                - columnheader "Name" [ref=f1e108]
+                - columnheader "Category" [ref=f1e109]
+                - columnheader "Size" [ref=f1e110]
+                - columnheader "Uploaded At" [ref=f1e111]
+                - columnheader "Actions" [ref=f1e112]
+            - rowgroup [ref=f1e113]:
+              - row [ref=f1e114]:
+                - cell "lawn-care-pennsylvania-nearme lawn-care-pennsylvania-nearme.mov" [ref=f1e115]:
+                  - generic [ref=f1e120]:
+                    - link "lawn-care-pennsylvania-nearme" [ref=f1e121] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/8
+                    - generic [ref=f1e122]: lawn-care-pennsylvania-nearme.mov
+                - cell "Video" [ref=f1e123]
+                - cell "122.54 MB" [ref=f1e125]
+                - cell "1 day ago" [ref=f1e126]
+                - cell [ref=f1e127]:
+                  - generic [ref=f1e128]:
+                    - link "Preview lawn-care-pennsylvania-nearme" [ref=f1e129] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/8/preview
+                    - link "Download lawn-care-pennsylvania-nearme" [ref=f1e133] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/8/download
+              - row [ref=f1e136]:
+                - cell "Shena 1 Shena 1.mp4" [ref=f1e137]:
+                  - generic [ref=f1e142]:
+                    - link "Shena 1" [ref=f1e143] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/7
+                    - generic [ref=f1e144]: Shena 1.mp4
+                - cell "Video" [ref=f1e145]
+                - cell "80.44 MB" [ref=f1e147]
+                - cell "1 day ago" [ref=f1e148]
+                - cell [ref=f1e149]:
+                  - generic [ref=f1e150]:
+                    - link "Preview Shena 1" [ref=f1e151] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/7/preview
+                    - link "Download Shena 1" [ref=f1e155] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/7/download
+              - row [ref=f1e158]:
+                - cell "Wallpaper Wallpaper.jpg" [ref=f1e159]:
+                  - generic [ref=f1e164]:
+                    - link "Wallpaper" [ref=f1e165] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/6
+                    - generic [ref=f1e166]: Wallpaper.jpg
+                - cell "Pictures" [ref=f1e167]
+                - cell "3.15 MB" [ref=f1e169]
+                - cell "1 day ago" [ref=f1e170]
+                - cell [ref=f1e171]:
+                  - generic [ref=f1e172]:
+                    - link "Preview Wallpaper" [ref=f1e173] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/6/preview
+                    - link "Download Wallpaper" [ref=f1e177] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/6/download
+              - row [ref=f1e180]:
+                - cell "Wallpaper Wallpaper.jpg" [ref=f1e181]:
+                  - generic [ref=f1e186]:
+                    - link "Wallpaper" [ref=f1e187] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/5
+                    - generic [ref=f1e188]: Wallpaper.jpg
+                - cell "Pictures" [ref=f1e189]
+                - cell "3.15 MB" [ref=f1e191]
+                - cell "1 day ago" [ref=f1e192]
+                - cell [ref=f1e193]:
+                  - generic [ref=f1e194]:
+                    - link "Preview Wallpaper" [ref=f1e195] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/5/preview
+                    - link "Download Wallpaper" [ref=f1e199] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/5/download
+              - row [ref=f1e202]:
+                - cell "Report Tamu Januari Report Tamu Januari.xlsx" [ref=f1e203]:
+                  - generic [ref=f1e208]:
+                    - link "Report Tamu Januari" [ref=f1e209] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/4
+                    - generic [ref=f1e210]: Report Tamu Januari.xlsx
+                - cell "Document" [ref=f1e211]
+                - cell "12.82 KB" [ref=f1e213]
+                - cell "1 day ago" [ref=f1e214]
+                - cell [ref=f1e215]:
+                  - generic [ref=f1e216]:
+                    - link "Preview Report Tamu Januari" [ref=f1e217] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/4/preview
+                    - link "Download Report Tamu Januari" [ref=f1e221] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/4/download
+              - row [ref=f1e224]:
+                - cell "WinBox WinBox.exe" [ref=f1e225]:
+                  - generic [ref=f1e230]:
+                    - link "WinBox" [ref=f1e231] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/3
+                    - generic [ref=f1e232]: WinBox.exe
+                - cell "Applications" [ref=f1e233]
+                - cell "47.60 MB" [ref=f1e235]
+                - cell "1 day ago" [ref=f1e236]
+                - cell [ref=f1e237]:
+                  - generic [ref=f1e238]:
+                    - link "Preview WinBox" [ref=f1e239] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/3/preview
+                    - link "Download WinBox" [ref=f1e243] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/3/download
+              - row [ref=f1e246]:
+                - cell "Report Tamu Januari Report Tamu Januari.xlsx" [ref=f1e247]:
+                  - generic [ref=f1e252]:
+                    - link "Report Tamu Januari" [ref=f1e253] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/2
+                    - generic [ref=f1e254]: Report Tamu Januari.xlsx
+                - cell "Uncategorized" [ref=f1e255]
+                - cell "12.82 KB" [ref=f1e256]
+                - cell "1 month ago" [ref=f1e257]
+                - cell [ref=f1e258]:
+                  - generic [ref=f1e259]:
+                    - link "Preview Report Tamu Januari" [ref=f1e260] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/2/preview
+                    - link "Download Report Tamu Januari" [ref=f1e264] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/2/download
+              - row [ref=f1e267]:
+                - cell "Format Permintaan Data KPK Pengadaan Langsung Format Permintaan Data KPK Pengadaan Langsung.xlsx" [ref=f1e268]:
+                  - generic [ref=f1e273]:
+                    - link "Format Permintaan Data KPK Pengadaan Langsung" [ref=f1e274] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/1
+                    - generic [ref=f1e275]: Format Permintaan Data KPK Pengadaan Langsung.xlsx
+                - cell "Uncategorized" [ref=f1e276]
+                - cell "13.29 KB" [ref=f1e277]
+                - cell "1 month ago" [ref=f1e278]
+                - cell [ref=f1e279]:
+                  - generic [ref=f1e280]:
+                    - link "Preview Format Permintaan Data KPK Pengadaan Langsung" [ref=f1e281] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/1/preview
+                    - link "Download Format Permintaan Data KPK Pengadaan Langsung" [ref=f1e285] [cursor=pointer]:
+                      - /url: http://simadu.test/documents/1/download

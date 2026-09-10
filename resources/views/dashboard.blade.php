@@ -1,13 +1,13 @@
 <x-app-layout>
     <div class="space-y-8">
         <!-- Dashboard Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800">Dashboard</h1>
                 <p class="text-slate-500 text-sm mt-1">Overview of your documents, folders, and storage usage.</p>
             </div>
             <div>
-                <a href="{{ route('drive.index') }}" class="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-600/10">
+                <a href="{{ route('drive.index') }}" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/10 transition-all hover:bg-indigo-700 sm:w-auto">
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                     Go to My Drive
                 </a>
@@ -15,9 +15,9 @@
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
             <!-- Total Folders Card -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-5 hover:border-slate-300 transition-colors">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-5">
                 <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                 </div>
@@ -28,7 +28,7 @@
             </div>
 
             <!-- Total Documents Card -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-5 hover:border-slate-300 transition-colors">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-5">
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
@@ -39,7 +39,7 @@
             </div>
 
             <!-- Storage Used Card -->
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-slate-300 transition-colors">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <div class="flex items-center space-x-5 mb-4">
                     <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
@@ -81,35 +81,74 @@
                     <p class="text-slate-400 text-sm mt-1">Upload a file in My Drive to get started.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                <div data-responsive-card-list class="divide-y divide-slate-100 lg:hidden">
+                    @foreach($recentDocuments as $doc)
+                        <article class="space-y-4 p-4 sm:p-5">
+                            <div class="flex min-w-0 items-start gap-3">
+                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <a href="{{ route('documents.show', $doc->id) }}" class="block break-words text-sm font-semibold text-slate-800 transition-colors hover:text-indigo-600">{{ $doc->nama }}</a>
+                                    <p class="break-all text-xs text-slate-400">{{ $doc->nama_file_asli }}</p>
+                                </div>
+                            </div>
+                            <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                                <div>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Category</dt>
+                                    <dd class="mt-1">
+                                        @if($doc->documentCategory)
+                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ $doc->documentCategory->warna }}20; color: {{ $doc->documentCategory->warna }}">{{ $doc->documentCategory->nama }}</span>
+                                        @else
+                                            <span class="text-xs text-slate-400">Uncategorized</span>
+                                        @endif
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Size</dt>
+                                    <dd class="mt-1 font-medium text-slate-600">{{ $doc->formattedSize() }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploaded At</dt>
+                                    <dd class="mt-1 text-slate-500">{{ $doc->created_at->diffForHumans() }}</dd>
+                                </div>
+                            </dl>
+                            <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
+                                <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50" aria-label="Preview {{ $doc->nama }}">Preview</a>
+                                <a href="{{ route('documents.download', $doc->id) }}" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50" aria-label="Download {{ $doc->nama }}">Download</a>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+                <div data-responsive-desktop-table class="hidden lg:block">
+                    <table class="w-full table-fixed text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                <th class="py-3 px-6">Name</th>
-                                <th class="py-3 px-6">Category</th>
-                                <th class="py-3 px-6">Size</th>
-                                <th class="py-3 px-6">Uploaded At</th>
-                                <th class="py-3 px-6 text-right">Actions</th>
+                                <th class="px-2 py-3 xl:px-6">Name</th>
+                                <th class="px-2 py-3 xl:px-6">Category</th>
+                                <th class="whitespace-nowrap px-2 py-3 xl:px-6">Size</th>
+                                <th class="px-2 py-3 xl:px-6">Uploaded At</th>
+                                <th class="px-2 py-3 text-right xl:px-6">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @foreach($recentDocuments as $doc)
                                 <tr class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700">
-                                    <td class="py-4 px-6 font-semibold text-slate-800">
+                                    <td class="px-2 py-4 font-semibold text-slate-800 xl:px-6">
                                         <div class="flex items-center space-x-3">
                                             <!-- SVG Document Icon -->
                                             <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                             </div>
-                                            <div class="truncate max-w-xs">
+                                            <div class="min-w-0 break-words">
                                                 <a href="{{ route('documents.show', $doc->id) }}" class="hover:text-indigo-600 transition-colors">
                                                     {{ $doc->nama }}
                                                 </a>
-                                                <span class="text-[10px] text-slate-400 block truncate">{{ $doc->nama_file_asli }}</span>
+                                                <span class="block break-all text-[10px] text-slate-400">{{ $doc->nama_file_asli }}</span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="py-4 px-6">
+                                    <td class="px-2 py-4 xl:px-6">
                                         @if($doc->documentCategory)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: {{ $doc->documentCategory->warna }}20; color: {{ $doc->documentCategory->warna }}">
                                                 {{ $doc->documentCategory->nama }}
@@ -118,18 +157,18 @@
                                             <span class="text-slate-400 text-xs">Uncategorized</span>
                                         @endif
                                     </td>
-                                    <td class="py-4 px-6 text-slate-500 font-medium">
+                                    <td class="whitespace-nowrap px-2 py-4 font-medium text-slate-500 xl:px-6">
                                         {{ $doc->formattedSize() }}
                                     </td>
-                                    <td class="py-4 px-6 text-slate-400">
+                                    <td class="px-2 py-4 text-slate-400 xl:px-6">
                                         {{ $doc->created_at->diffForHumans() }}
                                     </td>
-                                    <td class="py-4 px-6 text-right">
-                                        <div class="flex items-center justify-end space-x-2">
-                                            <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-all" title="Preview">
+                                    <td class="px-2 py-4 text-right xl:px-6">
+                                        <div class="flex flex-wrap items-center justify-end gap-1 xl:gap-2">
+                                            <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-all" title="Preview" aria-label="Preview {{ $doc->nama }}">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                             </a>
-                                            <a href="{{ route('documents.download', $doc->id) }}" class="p-1.5 text-slate-500 hover:text-emerald-600 rounded-lg hover:bg-slate-100 transition-all" title="Download">
+                                            <a href="{{ route('documents.download', $doc->id) }}" class="p-1.5 text-slate-500 hover:text-emerald-600 rounded-lg hover:bg-slate-100 transition-all" title="Download" aria-label="Download {{ $doc->nama }}">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                             </a>
                                         </div>

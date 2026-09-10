@@ -6,11 +6,11 @@
         <title>Shared Item - SIMADU</title>
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-slate-50 text-slate-800 min-h-screen p-6">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-5xl mx-auto p-8 shadow-xl text-center space-y-6">
+    <body class="min-h-screen bg-slate-50 p-4 font-sans text-slate-800 antialiased sm:p-6">
+        <div class="mx-auto w-full max-w-5xl space-y-6 rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-xl sm:p-8">
             @php
                 $item = $link->linkable;
                 $isDoc = $item instanceof \App\Models\Document;
@@ -33,7 +33,7 @@
             </div>
 
             <!-- Details Block -->
-            <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-left grid grid-cols-2 gap-4 text-xs">
+            <div class="grid grid-cols-1 gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4 text-left text-xs sm:grid-cols-2">
                 @if($isDoc)
                     <div>
                         <span class="text-slate-400 font-semibold block uppercase tracking-wider">File Size</span>
@@ -94,12 +94,12 @@
                                     </div>
                                 @endforeach
                                 @foreach($subdocs as $sd)
-                                    <div class="py-2.5 flex items-center justify-between">
-                                        <div class="flex items-center space-x-2 truncate max-w-[65%]">
+                                    <div class="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                        <div class="flex min-w-0 items-center space-x-2 sm:max-w-[65%]">
                                             <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                             <span class="font-medium text-slate-700 text-xs truncate" title="{{ $sd->nama_file_asli }}">{{ $sd->nama_file_asli }}</span>
                                         </div>
-                                        <div class="flex items-center space-x-3 shrink-0">
+                                        <div class="flex shrink-0 flex-wrap items-center gap-3">
                                             <span class="text-[10px] text-slate-400">{{ $sd->formattedSize() }}</span>
                                             @if($sd->isPreviewable())
                                                 <a href="{{ route('public.stream-file', ['token' => $link->token, 'document' => $sd->id]) }}" target="_blank" class="text-slate-600 hover:text-indigo-800 text-xs font-semibold">Preview</a>

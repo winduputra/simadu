@@ -1,12 +1,27 @@
-<aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+<aside
+    id="app-sidebar"
+    :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full shadow-none'"
+    :inert="!isDesktop && !sidebarOpen"
+    :aria-hidden="(!isDesktop && !sidebarOpen).toString()"
+    class="fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 -translate-x-full flex-col bg-slate-900 text-slate-300 transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:translate-x-0 lg:shadow-none"
+>
     <!-- Logo -->
-    <div class="h-16 flex items-center px-6 border-b border-slate-800">
+    <div class="flex h-16 items-center justify-between border-b border-slate-800 px-6">
         <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
             <div class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/20">
                 S
             </div>
             <span class="font-bold text-lg text-white tracking-wider">SIMADU</span>
         </a>
+        <button
+            x-ref="sidebarClose"
+            type="button"
+            @click="closeSidebar()"
+            class="-mr-2 inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-400 lg:hidden"
+            aria-label="Close navigation"
+        >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
     </div>
 
     <!-- Navigation links -->

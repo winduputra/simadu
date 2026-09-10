@@ -29,16 +29,55 @@
         allFolders: @js($folders),
         isDragging: false,
         uploads: [],
-        contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '', publicLinks: [], shares: [] },
+        contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '', publicLinks: [], shares: [], returnFocus: null },
+        contextMenuWidth: 192,
+        contextMenuHeight: 256,
+        contextMenuMargin: 16,
+        dialogReturnFocus: null,
+        activateDialog(dialog) {
+            if (dialog.contains(document.activeElement)) return;
+            if (!this.dialogReturnFocus) this.dialogReturnFocus = document.activeElement;
+            requestAnimationFrame(() => dialog.focus());
+        },
+        restoreDialogFocus(nextTick) {
+            if (!this.dialogReturnFocus) return;
+            const returnFocus = this.dialogReturnFocus;
+            this.dialogReturnFocus = null;
+            nextTick(() => returnFocus.focus());
+        },
+        containDialogFocus(event, root) {
+            const dialogIsOpen = this.showCreateFolder || this.showUpload || this.showRenameFolder
+                || this.showRenameFile || this.showMove || this.showShareModal;
+            if (!dialogIsOpen) return;
+            const dialog = [...root.querySelectorAll('[role=&quot;dialog&quot;]')]
+                .find(element => getComputedStyle(element).display !== 'none');
+            if (dialog && !dialog.contains(event.target)) dialog.focus();
+        },
+        closeDialogs() {
+            this.showCreateFolder = false;
+            this.showUpload = false;
+            this.showRenameFolder = false;
+            this.showRenameFile = false;
+            this.showMove = false;
+            this.showShareModal = false;
+        },
         openContextMenu(e, type, id, name, publicLinks = [], shares = []) {
             this.contextMenu.show = true;
-            this.contextMenu.x = e.clientX;
-            this.contextMenu.y = e.clientY;
+            this.contextMenu.returnFocus = e.currentTarget.querySelector('[x-ref="actionsTrigger"]');
+            this.contextMenu.x = Math.max(this.contextMenuMargin, Math.min(e.clientX, window.innerWidth - this.contextMenuWidth - this.contextMenuMargin));
+            this.contextMenu.y = Math.max(this.contextMenuMargin, Math.min(e.clientY, window.innerHeight - this.contextMenuHeight - this.contextMenuMargin));
             this.contextMenu.type = type;
             this.contextMenu.id = id;
             this.contextMenu.name = name;
             this.contextMenu.publicLinks = publicLinks;
             this.contextMenu.shares = shares;
+        },
+        closeContextMenu(nextTick) {
+            if (!this.contextMenu.show) return;
+            const returnFocus = this.contextMenu.returnFocus;
+            this.contextMenu.show = false;
+            this.contextMenu.returnFocus = null;
+            if (returnFocus) nextTick(() => returnFocus.focus());
         },
         async handleDrop(e) {
             this.isDragging = false;
@@ -164,7 +203,9 @@
     @contextmenu.prevent="contextMenu.show = false"
     @dragover.prevent="isDragging = true" 
     @dragleave.prevent="isDragging = false" 
-    @drop.prevent="handleDrop($event)">
+    @drop.prevent="handleDrop($event)"
+    @focusin.window="containDialogFocus($event, $root)"
+    @keydown.escape.window="closeDialogs(); closeContextMenu($nextTick)">
         
         <!-- Drag and Drop Visual Overlay -->
         <div x-show="isDragging" x-transition class="absolute inset-0 z-50 bg-indigo-50/90 border-4 border-dashed border-indigo-500 rounded-2xl flex items-center justify-center pointer-events-none">
@@ -176,8 +217,8 @@
         </div>
         <!-- Public Link Success Notification Banner -->
         @if(session('public_link_url'))
-            <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg flex items-center justify-between" x-data="{ copied: false }">
-                <div class="flex items-center space-x-3 truncate mr-4">
+            <div class="flex flex-col gap-3 rounded-2xl bg-indigo-600 p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between" x-data="{ copied: false }">
+                <div class="flex min-w-0 items-center space-x-3 sm:mr-4">
                     <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     </div>
@@ -186,7 +227,7 @@
                         <p class="text-sm font-bold truncate">{{ session('public_link_url') }}</p>
                     </div>
                 </div>
-                <button @click="navigator.clipboard.writeText('{{ session('public_link_url') }}'); copied = true; setTimeout(() => copied = false, 2000)" class="px-4 py-2 bg-white text-indigo-600 hover:bg-indigo-50 text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center">
+                <button @click="navigator.clipboard.writeText('{{ session('public_link_url') }}'); copied = true; setTimeout(() => copied = false, 2000)" class="flex w-full shrink-0 items-center justify-center rounded-xl bg-white px-4 py-2 text-xs font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50 sm:w-auto">
                     <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
                     <span x-text="copied ? 'Berhasil Di-copy!' : 'Copy Link'">Copy Link</span>
                 </button>
@@ -197,25 +238,25 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <!-- Breadcrumbs -->
-                <nav class="flex items-center space-x-2 text-sm text-slate-500 font-medium">
+                <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap text-sm font-medium text-slate-500">
                     <a href="{{ route('drive.index') }}" class="hover:text-indigo-600 transition-colors">My Drive</a>
                     @foreach($breadcrumbs as $bc)
                         <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        <a href="{{ route('drive.index', $bc->id) }}" class="hover:text-indigo-600 transition-colors">{{ $bc->nama }}</a>
+                        <a href="{{ route('drive.index', $bc->id) }}" class="max-w-48 truncate transition-colors hover:text-indigo-600" title="{{ $bc->nama }}">{{ $bc->nama }}</a>
                     @endforeach
                 </nav>
-                <h1 class="text-2xl font-bold text-slate-800 mt-2">
+                <h1 class="mt-2 break-words text-2xl font-bold text-slate-800">
                     {{ $folder ? $folder->nama : 'My Drive' }}
                 </h1>
             </div>
 
             <!-- Action buttons -->
-            <div class="flex items-center space-x-3">
-                <button @click="showCreateFolder = true" class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold rounded-xl transition-all shadow-sm">
+            <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+                <button @click="showCreateFolder = true" class="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 sm:w-auto">
                     <svg class="w-4 h-4 mr-2 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                     New Folder
                 </button>
-                <button @click="showUpload = true" class="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-600/10">
+                <button @click="showUpload = true" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/10 transition-all hover:bg-indigo-700 sm:w-auto">
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Upload Files
                 </button>
@@ -226,9 +267,9 @@
         @if(!$folders->isEmpty())
         <div>
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Folders</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
                 @foreach($folders as $f)
-                    <div @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, '{{ addslashes($f->nama) }}', {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="group bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
+                    <div @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="group bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
                         <a href="{{ route('drive.index', $f->id) }}" class="flex items-center space-x-3 truncate flex-1 mr-2">
                             <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -239,18 +280,18 @@
                         </a>
 
                         <!-- Dropdown Menu -->
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none">
+                        <div class="relative" x-data="{ open: false }" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()">
+                            <button x-ref="actionsTrigger" type="button" @click="open = !open" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open folder actions for {{ $f->nama }}">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                             </button>
-                            <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
-                                <button @click="open = false; openShareModal('folder', {{ $f->id }}, '{{ addslashes($f->nama) }}', {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                            <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
+                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
                                     Share & Links
                                 </button>
-                                <button @click="open = false; activeFolderId = {{ $f->id }}; activeFolderName = '{{ $f->nama }}'; showRenameFolder = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
+                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFolderId = {{ $f->id }}; activeFolderName = {{ Js::from($f->nama) }}; showRenameFolder = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                     Rename
                                 </button>
-                                <button @click="open = false; activeFolderId = {{ $f->id }}; activeFolderName = '{{ $f->nama }}'; activeType = 'folder'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
+                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFolderId = {{ $f->id }}; activeFolderName = {{ Js::from($f->nama) }}; activeType = 'folder'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                     Move to...
                                 </button>
                                 <hr class="border-slate-100 my-1">
@@ -281,35 +322,91 @@
                     <p class="text-slate-400 text-sm mt-1">Click "Upload Files" to add files.</p>
                 </div>
             @else
-                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-visible">
-                    <div class="w-full overflow-visible">
-                        <table class="w-full text-left border-collapse">
+                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div data-responsive-card-list class="divide-y divide-slate-100 lg:hidden">
+                        @foreach($documents as $doc)
+                            <article
+                                x-data="{ open: false }"
+                                @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()"
+                                @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})"
+                                class="space-y-4 p-4 sm:p-5"
+                            >
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <a href="{{ route('documents.show', $doc->id) }}" class="block break-words text-sm font-semibold text-slate-800 transition-colors hover:text-indigo-600">{{ $doc->nama }}</a>
+                                        <p class="break-all text-xs text-slate-400">{{ $doc->nama_file_asli }}</p>
+                                    </div>
+                                </div>
+                                <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                                    <div>
+                                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Category</dt>
+                                        <dd class="mt-1">
+                                            @if($doc->documentCategory)
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ $doc->documentCategory->warna }}20; color: {{ $doc->documentCategory->warna }}">{{ $doc->documentCategory->nama }}</span>
+                                            @else
+                                                <span class="text-xs text-slate-400">Uncategorized</span>
+                                            @endif
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Size</dt>
+                                        <dd class="mt-1 font-medium text-slate-600">{{ $doc->formattedSize() }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Last Modified</dt>
+                                        <dd class="mt-1 text-slate-500">{{ $doc->updated_at->diffForHumans() }}</dd>
+                                    </div>
+                                </dl>
+                                <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                                    <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50" aria-label="Preview {{ $doc->nama }}">Preview</a>
+                                    <a href="{{ route('documents.download', $doc->id) }}" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50" aria-label="Download {{ $doc->nama }}">Download</a>
+                                    <button x-ref="actionsTrigger" type="button" @click="open = !open" :aria-expanded="open" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open file actions for {{ $doc->nama }}">More Actions</button>
+                                </div>
+                                <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="grid grid-cols-1 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2">
+                                    <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('document', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="min-h-10 rounded-lg px-3 text-left text-sm font-semibold text-indigo-600 hover:bg-indigo-50">Share & Links</button>
+                                    <a href="{{ route('documents.show', $doc->id) }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-slate-700 hover:bg-white">Details</a>
+                                    <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; showRenameFile = true" class="min-h-10 rounded-lg px-3 text-left text-sm text-slate-700 hover:bg-white">Rename</button>
+                                    <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; activeType = 'file'; showMove = true" class="min-h-10 rounded-lg px-3 text-left text-sm text-slate-700 hover:bg-white">Move to...</button>
+                                    <form action="{{ route('documents.destroy', $doc->id) }}" method="POST" onsubmit="return confirm('Move document to Trash?');" class="sm:col-span-2">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="min-h-10 w-full rounded-lg px-3 text-left text-sm text-rose-600 hover:bg-rose-50">Delete</button>
+                                    </form>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                    <div data-responsive-desktop-table class="hidden w-full lg:block" role="region" aria-label="Files table" tabindex="0">
+                        <table class="w-full table-fixed text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                    <th class="py-3 px-6">Name</th>
-                                    <th class="py-3 px-6">Category</th>
-                                    <th class="py-3 px-6">Size</th>
-                                    <th class="py-3 px-6">Last Modified</th>
-                                    <th class="py-3 px-6 text-right">Actions</th>
+                                    <th class="px-2 py-3 xl:px-6">Name</th>
+                                    <th class="px-2 py-3 xl:px-6">Category</th>
+                                    <th class="whitespace-nowrap px-2 py-3 xl:px-6">Size</th>
+                                    <th class="px-2 py-3 xl:px-6">Last Modified</th>
+                                    <th class="px-2 py-3 text-right xl:px-6">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach($documents as $doc)
-                                    <tr @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, '{{ addslashes($doc->nama) }}', {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700 cursor-context-menu">
-                                        <td class="py-4 px-6 font-semibold text-slate-800">
+                                    <tr @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700 cursor-context-menu">
+                                        <td class="px-2 py-4 font-semibold text-slate-800 xl:px-6">
                                             <div class="flex items-center space-x-3">
                                                 <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                                 </div>
-                                                <div class="truncate max-w-xs">
+                                                <div class="min-w-0 break-words">
                                                     <a href="{{ route('documents.show', $doc->id) }}" class="hover:text-indigo-600 transition-colors">
                                                         {{ $doc->nama }}
                                                     </a>
-                                                    <span class="text-[10px] text-slate-400 block truncate">{{ $doc->nama_file_asli }}</span>
+                                                    <span class="block break-all text-[10px] text-slate-400">{{ $doc->nama_file_asli }}</span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="py-4 px-6">
+                                        <td class="px-2 py-4 xl:px-6">
                                             @if($doc->documentCategory)
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: {{ $doc->documentCategory->warna }}20; color: {{ $doc->documentCategory->warna }}">
                                                     {{ $doc->documentCategory->nama }}
@@ -318,37 +415,37 @@
                                                 <span class="text-slate-400 text-xs">Uncategorized</span>
                                             @endif
                                         </td>
-                                        <td class="py-4 px-6 text-slate-500 font-medium">
+                                        <td class="whitespace-nowrap px-2 py-4 font-medium text-slate-500 xl:px-6">
                                             {{ $doc->formattedSize() }}
                                         </td>
-                                        <td class="py-4 px-6 text-slate-400">
+                                        <td class="break-words px-2 py-4 text-slate-400 xl:px-6">
                                             {{ $doc->updated_at->diffForHumans() }}
                                         </td>
-                                        <td class="py-4 px-6 text-right">
-                                            <div class="flex items-center justify-end space-x-2" x-data="{ open: false }">
-                                                <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-all" title="Preview">
+                                        <td class="px-2 py-4 text-right xl:px-6">
+                                            <div class="flex flex-wrap items-center justify-end gap-1 xl:gap-2" x-data="{ open: false }" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()">
+                                                <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-all" title="Preview" aria-label="Preview {{ $doc->nama }}">
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 </a>
-                                                <a href="{{ route('documents.download', $doc->id) }}" class="p-1.5 text-slate-500 hover:text-emerald-600 rounded-lg hover:bg-slate-100 transition-all" title="Download">
+                                                <a href="{{ route('documents.download', $doc->id) }}" class="p-1.5 text-slate-500 hover:text-emerald-600 rounded-lg hover:bg-slate-100 transition-all" title="Download" aria-label="Download {{ $doc->nama }}">
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                                 </a>
 
                                                 <!-- Dropdown Actions -->
                                                 <div class="relative">
-                                                    <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none">
+                                                    <button x-ref="actionsTrigger" type="button" @click="open = !open" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open file actions for {{ $doc->nama }}">
                                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                                                     </button>
-                                                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-[90]">
-                                                        <button @click="open = false; openShareModal('document', {{ $doc->id }}, '{{ addslashes($doc->nama) }}', {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
+                                                    <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-[90]">
+                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('document', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
                                                             Share & Links
                                                         </button>
                                                         <a href="{{ route('documents.show', $doc->id) }}" class="w-full block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                                             Details
                                                         </a>
-                                                        <button @click="open = false; activeFileId = {{ $doc->id }}; activeFileName = '{{ $doc->nama }}'; showRenameFile = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
+                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; showRenameFile = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                                             Rename
                                                         </button>
-                                                        <button @click="open = false; activeFileId = {{ $doc->id }}; activeFileName = '{{ $doc->nama }}'; activeType = 'file'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
+                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; activeType = 'file'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
                                                             Move to...
                                                         </button>
                                                         <hr class="border-slate-100 my-1">
@@ -375,9 +472,9 @@
         <!-- Modals Section -->
 
         <!-- Create Folder Modal -->
-        <div x-show="showCreateFolder" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showCreateFolder = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">New Folder</h3>
+        <div x-show="showCreateFolder" x-init="$watch('showCreateFolder', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="create-folder-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showCreateFolder = false">
+                <h3 id="create-folder-title" class="text-lg font-bold text-slate-800 mb-4">New Folder</h3>
                 <form action="{{ route('folders.store') }}" method="POST">
                     @csrf
                     @if($folder)
@@ -389,25 +486,25 @@
                             <input type="text" name="nama" required placeholder="Enter folder name..." class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showCreateFolder = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Create</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showCreateFolder = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Create</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Upload Files Modal -->
-        <div x-show="showUpload" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak x-data="{ selectedFiles: [] }">
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl" @click.away="showUpload = false; selectedFiles = []">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Upload Files</h3>
+        <div x-show="showUpload" x-init="$watch('showUpload', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak x-data="{ selectedFiles: [] }" role="dialog" aria-modal="true" aria-labelledby="upload-files-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showUpload = false; selectedFiles = []">
+                <h3 id="upload-files-title" class="text-lg font-bold text-slate-800 mb-4">Upload Files</h3>
                 <form action="{{ route('documents.upload') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @if($folder)
                         <input type="hidden" name="folder_id" value="{{ $folder->id }}">
                     @endif
                     <div class="space-y-6">
-                        <div class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer relative">
+                        <div class="relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-4 transition-colors hover:border-indigo-500 sm:p-8">
                             <input type="file" name="files[]" multiple required class="absolute inset-0 opacity-0 cursor-pointer" @change="selectedFiles = Array.from($event.target.files)">
                             <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center mb-3">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -431,18 +528,18 @@
                             </div>
                         </template>
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showUpload = false; selectedFiles = []" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Upload</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showUpload = false; selectedFiles = []" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Upload</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Rename Folder Modal -->
-        <div x-show="showRenameFolder" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showRenameFolder = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Rename Folder</h3>
+        <div x-show="showRenameFolder" x-init="$watch('showRenameFolder', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="rename-folder-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showRenameFolder = false">
+                <h3 id="rename-folder-title" class="text-lg font-bold text-slate-800 mb-4">Rename Folder</h3>
                 <form :action="`/folders/${activeFolderId}`" method="POST">
                     @csrf
                     @method('PUT')
@@ -452,18 +549,18 @@
                             <input type="text" name="nama" required :value="activeFolderName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showRenameFolder = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Rename</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showRenameFolder = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Rename</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Rename File Modal -->
-        <div x-show="showRenameFile" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showRenameFile = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Rename File</h3>
+        <div x-show="showRenameFile" x-init="$watch('showRenameFile', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="rename-file-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showRenameFile = false">
+                <h3 id="rename-file-title" class="text-lg font-bold text-slate-800 mb-4">Rename File</h3>
                 <form :action="`/documents/${activeFileId}`" method="POST">
                     @csrf
                     @method('PUT')
@@ -473,23 +570,23 @@
                             <input type="text" name="nama" required :value="activeFileName" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showRenameFile = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Rename</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showRenameFile = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Rename</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Share Item Modal -->
-        <div x-show="showShareModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6" @click.away="showShareModal = false">
+        <div x-show="showShareModal" x-init="$watch('showShareModal', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="share-item-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-lg space-y-6 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showShareModal = false">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-800" x-text="`Share ${shareItemType === 'folder' ? 'Folder' : 'File'}`"></h3>
+                        <h3 id="share-item-title" class="text-lg font-bold text-slate-800" x-text="`Share ${shareItemType === 'folder' ? 'Folder' : 'File'}`"></h3>
                         <p class="text-xs text-slate-500 font-medium truncate max-w-xs mt-0.5" x-text="shareItemName"></p>
                     </div>
-                    <button @click="showShareModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <button type="button" @click="showShareModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg" aria-label="Close share dialog">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -511,7 +608,7 @@
                         <input type="hidden" name="shareable_type" :value="shareItemType">
                         <input type="hidden" name="shareable_id" :value="shareItemId">
 
-                        <div class="grid grid-cols-2 gap-3" x-data="{ targetType: 'user' }">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-data="{ targetType: 'user' }">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Share Target</label>
                                 <select name="shared_to_type" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500" x-model="targetType">
@@ -529,7 +626,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-span-2">
+                            <div class="sm:col-span-2">
                                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Select Recipient</label>
                                 <select name="shared_to_id" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
                                     <template x-if="targetType === 'user'">
@@ -626,7 +723,7 @@
                         <input type="hidden" name="linkable_type" :value="shareItemType">
                         <input type="hidden" name="linkable_id" :value="shareItemId">
 
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Permission</label>
                                 <select name="permission" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
@@ -640,7 +737,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Expiration (Optional)</label>
                                 <input type="datetime-local" name="expires_at" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500">
@@ -663,9 +760,9 @@
         </div>
 
         <!-- Move Modal -->
-        <div x-show="showMove" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showMove = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-2">Move Item</h3>
+        <div x-show="showMove" x-init="$watch('showMove', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="move-item-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showMove = false">
+                <h3 id="move-item-title" class="text-lg font-bold text-slate-800 mb-2">Move Item</h3>
                 <p class="text-slate-400 text-xs mb-4">Select target destination folder</p>
                 <form :action="activeType === 'folder' ? `/folders/${activeFolderId}/move` : `/documents/${activeFileId}/move`" method="POST">
                     @csrf
@@ -680,15 +777,15 @@
                             </select>
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showMove = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Move</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showMove = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Move</button>
                     </div>
                 </form>
             </div>
         </div>
         <!-- Floating Upload Progress -->
-        <div x-show="uploads.length > 0" x-transition class="fixed bottom-6 right-6 w-96 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-[400px]" x-cloak>
+        <div x-show="uploads.length > 0" x-transition class="fixed inset-x-4 bottom-4 z-50 flex max-h-[400px] w-auto max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-96" x-cloak>
             <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between shadow-sm cursor-pointer" @click="document.getElementById('uploadList').classList.toggle('hidden')">
                 <h3 class="text-sm font-semibold flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
@@ -741,19 +838,20 @@
              class="fixed bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[100] w-48 overflow-hidden"
              :style="`left: ${contextMenu.x}px; top: ${contextMenu.y}px;`"
              @click.stop
+             @keydown.escape.stop.prevent="closeContextMenu($nextTick)"
              x-cloak>
             
             <template x-if="contextMenu.type === 'folder'">
                 <div>
-                    <button @click="openShareModal('folder', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; openShareModal('folder', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                         Share & Links
                     </button>
-                    <button @click="showRenameFolder = true; activeFolderId = contextMenu.id; activeFolderName = contextMenu.name; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; showRenameFolder = true; activeFolderId = contextMenu.id; activeFolderName = contextMenu.name; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         Rename
                     </button>
-                    <button @click="showMove = true; activeFolderId = contextMenu.id; activeFolderName = contextMenu.name; activeType = 'folder'; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; showMove = true; activeFolderId = contextMenu.id; activeFolderName = contextMenu.name; activeType = 'folder'; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Move to...
                     </button>
@@ -767,7 +865,7 @@
             
             <template x-if="contextMenu.type === 'file'">
                 <div>
-                    <button @click="openShareModal('document', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; openShareModal('document', contextMenu.id, contextMenu.name, contextMenu.publicLinks, contextMenu.shares); contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                         Share & Links
                     </button>
@@ -784,11 +882,11 @@
                         Download
                     </a>
                     <hr class="border-slate-100 my-1">
-                    <button @click="showRenameFile = true; activeFileId = contextMenu.id; activeFileName = contextMenu.name; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; showRenameFile = true; activeFileId = contextMenu.id; activeFileName = contextMenu.name; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         Rename
                     </button>
-                    <button @click="showMove = true; activeFileId = contextMenu.id; activeFileName = contextMenu.name; activeType = 'file'; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
+                    <button @click="dialogReturnFocus = contextMenu.returnFocus; showMove = true; activeFileId = contextMenu.id; activeFileName = contextMenu.name; activeType = 'file'; contextMenu.show = false" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left transition-colors">
                         <svg class="w-4 h-4 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         Move to...
                     </button>

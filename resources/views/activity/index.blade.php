@@ -1,15 +1,15 @@
 <x-app-layout>
     <div class="space-y-8">
         <!-- Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800">Activity Log</h1>
                 <p class="text-slate-500 text-sm mt-1">Audit log of actions performed on folders, documents, and shares.</p>
             </div>
 
             <!-- Action Filter -->
-            <form action="{{ route('activity.index') }}" method="GET" class="flex items-center space-x-3">
-                <select name="aksi" class="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="this.form.submit()">
+            <form action="{{ route('activity.index') }}" method="GET" class="w-full sm:w-auto">
+                <select name="aksi" class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:w-auto" onchange="this.form.submit()">
                     <option value="">All Actions</option>
                     <option value="upload" {{ request('aksi') === 'upload' ? 'selected' : '' }}>Upload</option>
                     <option value="delete" {{ request('aksi') === 'delete' ? 'selected' : '' }}>Delete</option>
@@ -32,34 +32,86 @@
                     <p class="text-slate-500 font-medium">No activity logs found.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                <div data-responsive-card-list class="divide-y divide-slate-100 lg:hidden">
+                    @foreach($logs as $log)
+                        <article class="space-y-4 p-4 sm:p-5">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="break-words text-sm font-semibold text-slate-800">{{ $log->user?->nama ?? 'Unknown' }}</p>
+                                    <p class="text-xs text-slate-400">{{ $log->user?->nip }}</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide
+                                    @if(in_array($log->aksi, ['upload', 'restore', 'folder_create'])) bg-emerald-50 text-emerald-700
+                                    @elseif(in_array($log->aksi, ['delete', 'force_delete', 'unshare'])) bg-rose-50 text-rose-700
+                                    @else bg-amber-50 text-amber-700 @endif">
+                                    {{ $log->aksi }}
+                                </span>
+                            </div>
+                            <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                                <div>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Target Item</dt>
+                                    <dd class="mt-1 break-words font-medium text-slate-700">
+                                        @if($log->loggable)
+                                            {{ $log->loggable->nama ?? 'Item' }}
+                                            <span class="block text-[10px] uppercase tracking-wider text-slate-400">{{ class_basename($log->loggable_type) }}</span>
+                                        @else
+                                            <span class="italic text-slate-400">No Target / Deleted</span>
+                                        @endif
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Timestamp</dt>
+                                    <dd class="mt-1 text-slate-600">{{ $log->created_at->format('d M Y H:i') }}</dd>
+                                </div>
+                                <div class="min-w-0 sm:col-span-2">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Details</dt>
+                                    <dd class="mt-1 min-w-0">
+                                        @if($log->detail)
+                                            <code class="block break-all rounded border border-slate-100 bg-slate-50 px-2 py-1 text-xs text-slate-600">{{ json_encode($log->detail) }}</code>
+                                        @else
+                                            <span class="text-slate-400">-</span>
+                                        @endif
+                                    </dd>
+                                </div>
+                                <div class="min-w-0 sm:col-span-2">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">IP / Agent</dt>
+                                    <dd class="mt-1 min-w-0 text-xs text-slate-400">
+                                        <span class="font-medium text-slate-500">{{ $log->ip_address }}</span>
+                                        <span class="block break-words" title="{{ $log->user_agent }}">{{ $log->user_agent }}</span>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </article>
+                    @endforeach
+                </div>
+                <div data-responsive-desktop-table class="hidden lg:block">
+                    <table class="w-full table-fixed text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                <th class="py-3 px-6">User</th>
-                                <th class="py-3 px-6">Action</th>
-                                <th class="py-3 px-6">Target Item</th>
-                                <th class="py-3 px-6">Details</th>
-                                <th class="py-3 px-6">IP / Agent</th>
-                                <th class="py-3 px-6">Timestamp</th>
+                                <th class="px-2 py-3 xl:px-6">User</th>
+                                <th class="px-2 py-3 xl:px-6">Action</th>
+                                <th class="px-2 py-3 xl:px-6">Target Item</th>
+                                <th class="px-2 py-3 xl:px-6">Details</th>
+                                <th class="px-2 py-3 xl:px-6">IP / Agent</th>
+                                <th class="px-2 py-3 xl:px-6">Timestamp</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @foreach($logs as $log)
-                                <tr class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700">
-                                    <td class="py-4 px-6 font-semibold text-slate-800">
+                                <tr class="text-xs text-slate-700 transition-colors hover:bg-slate-50/80 xl:text-sm">
+                                    <td class="break-words px-2 py-4 font-semibold text-slate-800 xl:px-6">
                                         {{ $log->user?->nama ?? 'Unknown' }}
                                         <span class="text-[10px] text-slate-400 block">{{ $log->user?->nip }}</span>
                                     </td>
-                                    <td class="py-4 px-6">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide
+                                    <td class="px-2 py-4 xl:px-6">
+                                        <span class="inline-block max-w-full break-all px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide
                                             @if(in_array($log->aksi, ['upload', 'restore', 'folder_create'])) bg-emerald-50 text-emerald-700
                                             @elseif(in_array($log->aksi, ['delete', 'force_delete', 'unshare'])) bg-rose-50 text-rose-700
                                             @else bg-amber-50 text-amber-700 @endif">
                                             {{ $log->aksi }}
                                         </span>
                                     </td>
-                                    <td class="py-4 px-6 font-medium text-slate-700">
+                                    <td class="break-words px-2 py-4 font-medium text-slate-700 xl:px-6">
                                         @if($log->loggable)
                                             <span class="text-slate-900">{{ $log->loggable->nama ?? 'Item' }}</span>
                                             <span class="text-[10px] text-slate-400 block uppercase tracking-wider">{{ class_basename($log->loggable_type) }}</span>
@@ -67,20 +119,20 @@
                                             <span class="text-slate-400 italic">No Target / Deleted</span>
                                         @endif
                                     </td>
-                                    <td class="py-4 px-6 text-slate-500 max-w-xs truncate">
+                                    <td class="break-all px-2 py-4 text-slate-500 xl:px-6">
                                         @if($log->detail)
-                                            <code class="text-xs bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded text-slate-600 block truncate">
+                                            <code class="block break-all rounded border border-slate-100 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-600">
                                                 {{ json_encode($log->detail) }}
                                             </code>
                                         @else
                                             <span class="text-slate-400">-</span>
                                         @endif
                                     </td>
-                                    <td class="py-4 px-6 text-xs text-slate-400">
+                                    <td class="break-all px-2 py-4 text-xs text-slate-400 xl:px-6">
                                         <span class="font-medium text-slate-500">{{ $log->ip_address }}</span>
-                                        <span class="block truncate max-w-[150px]" title="{{ $log->user_agent }}">{{ $log->user_agent }}</span>
+                                        <span class="block break-words" title="{{ $log->user_agent }}">{{ $log->user_agent }}</span>
                                     </td>
-                                    <td class="py-4 px-6 text-slate-400 text-xs">
+                                    <td class="break-words px-2 py-4 text-xs text-slate-400 xl:px-6">
                                         {{ $log->created_at->format('d M Y H:i') }}
                                     </td>
                                 </tr>

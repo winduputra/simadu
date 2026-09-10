@@ -2,31 +2,54 @@
     <div class="space-y-8" x-data="{ 
         showShare: false, 
         showPublicLink: false, 
-        showNewVersion: false 
-    }">
+        showNewVersion: false,
+        recipientType: 'user',
+        dialogReturnFocus: null,
+        activateDialog(dialog) {
+            if (dialog.contains(document.activeElement)) return;
+            this.dialogReturnFocus = document.activeElement;
+            requestAnimationFrame(() => dialog.focus());
+        },
+        restoreDialogFocus() {
+            if (!this.dialogReturnFocus) return;
+            const returnFocus = this.dialogReturnFocus;
+            this.dialogReturnFocus = null;
+            setTimeout(() => returnFocus.focus(), 0);
+        },
+        containDialogFocus(event, root) {
+            const dialog = [...root.querySelectorAll('[role=&quot;dialog&quot;]')]
+                .find(element => getComputedStyle(element).display !== 'none');
+            if (dialog && !dialog.contains(event.target)) dialog.focus();
+        },
+        closeDialogs() {
+            this.showShare = false;
+            this.showPublicLink = false;
+            this.showNewVersion = false;
+        }
+    }" @focusin.window="containDialogFocus($event, $root)" @keydown.escape.window="closeDialogs()">
         <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <nav class="flex items-center space-x-2 text-sm text-slate-500 font-medium">
+                <nav class="flex items-center gap-2 overflow-x-auto whitespace-nowrap text-sm font-medium text-slate-500">
                     <a href="{{ route('drive.index') }}" class="hover:text-indigo-600 transition-colors">My Drive</a>
                     @if($document->folder)
                         <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         <a href="{{ route('drive.index', $document->folder->id) }}" class="hover:text-indigo-600 transition-colors">{{ $document->folder->nama }}</a>
                     @endif
                     <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="text-slate-400">{{ $document->nama }}</span>
+                    <span class="max-w-48 truncate text-slate-400" title="{{ $document->nama }}">{{ $document->nama }}</span>
                 </nav>
-                <h1 class="text-2xl font-bold text-slate-800 mt-2">
+                <h1 class="mt-2 break-words text-2xl font-bold text-slate-800">
                     {{ $document->nama }}
                 </h1>
             </div>
 
             <!-- Actions -->
-            <div class="flex items-center space-x-3">
-                <a href="{{ route('documents.preview', $document->id) }}" target="_blank" class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold rounded-xl transition-all shadow-sm">
+            <div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+                <a href="{{ route('documents.preview', $document->id) }}" target="_blank" class="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 sm:w-auto">
                     Preview
                 </a>
-                <a href="{{ route('documents.download', $document->id) }}" class="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-indigo-600/10">
+                <a href="{{ route('documents.download', $document->id) }}" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/10 transition-all hover:bg-indigo-700 sm:w-auto">
                     Download
                 </a>
             </div>
@@ -59,10 +82,10 @@
 
                     <!-- Category Assignment -->
                     <div class="mt-6 pt-6 border-t border-slate-100">
-                        <form action="{{ route('documents.category.update', $document->id) }}" method="POST" class="max-w-xs">
+                        <form action="{{ route('documents.category.update', $document->id) }}" method="POST" class="w-full max-w-xs">
                             @csrf
                             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Category</label>
-                            <div class="flex space-x-2">
+                            <div class="flex flex-col gap-2 sm:flex-row">
                                 <select name="document_category_id" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option value="">No Category</option>
                                     @foreach($categories as $cat)
@@ -71,7 +94,7 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all">Save</button>
+                                <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-slate-800 sm:w-auto">Save</button>
                             </div>
                         </form>
                     </div>
@@ -79,7 +102,7 @@
 
                 <!-- Version History -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h2 class="text-lg font-bold text-slate-800">Version History</h2>
                         <button @click="showNewVersion = true" class="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-colors">
                             Upload New Version
@@ -88,8 +111,8 @@
 
                     <div class="space-y-4">
                         @foreach($document->versions as $ver)
-                            <div class="flex items-start justify-between p-4 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
-                                <div class="space-y-1.5 flex-1 min-w-0 mr-4">
+                            <div class="flex flex-col gap-3 rounded-xl border border-slate-100 p-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-start sm:justify-between">
+                                <div class="min-w-0 flex-1 space-y-1.5 sm:mr-4">
                                     <div class="flex items-center space-x-2">
                                         <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-extrabold rounded-md">V{{ $ver->versi }}</span>
                                         <span class="text-slate-800 font-semibold text-sm truncate">{{ $ver->nama_file }}</span>
@@ -221,9 +244,9 @@
         <!-- Modals -->
 
         <!-- Add Recipients Share Modal -->
-        <div x-show="showShare" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showShare = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Share Document</h3>
+        <div x-show="showShare" x-init="$watch('showShare', value => value ? activateDialog($el) : restoreDialogFocus())" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="share-document-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showShare = false">
+                <h3 id="share-document-title" class="text-lg font-bold text-slate-800 mb-4">Share Document</h3>
                 <form action="{{ route('shares.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="shareable_type" value="document">
@@ -239,7 +262,7 @@
                         </div>
 
                         <!-- User Recipient -->
-                        <div x-show="recipientType === 'user'" x-init="recipientType = 'user'">
+                        <div x-show="recipientType === 'user'">
                             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Employee</label>
                             <select name="shared_to_id" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" x-bind:disabled="recipientType !== 'user'">
                                 @foreach($users as $u)
@@ -268,18 +291,18 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showShare = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Share</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showShare = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Share</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Create Public Link Modal -->
-        <div x-show="showPublicLink" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showPublicLink = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Create Public Link</h3>
+        <div x-show="showPublicLink" x-init="$watch('showPublicLink', value => value ? activateDialog($el) : restoreDialogFocus())" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="create-public-link-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showPublicLink = false">
+                <h3 id="create-public-link-title" class="text-lg font-bold text-slate-800 mb-4">Create Public Link</h3>
                 <form action="{{ route('public-links.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="linkable_type" value="document">
@@ -310,18 +333,18 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showPublicLink = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Generate Link</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showPublicLink = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Generate Link</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- Upload New Version Modal -->
-        <div x-show="showNewVersion" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-cloak>
-            <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl" @click.away="showNewVersion = false">
-                <h3 class="text-lg font-bold text-slate-800 mb-4">Upload New Version</h3>
+        <div x-show="showNewVersion" x-init="$watch('showNewVersion', value => value ? activateDialog($el) : restoreDialogFocus())" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="upload-version-title">
+            <div class="my-4 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl sm:p-6" @click.away="showNewVersion = false">
+                <h3 id="upload-version-title" class="text-lg font-bold text-slate-800 mb-4">Upload New Version</h3>
                 <form action="{{ route('versions.store', $document->id) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="space-y-4">
@@ -335,9 +358,9 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" @click="showNewVersion = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-250 text-slate-700 text-sm font-semibold rounded-xl transition-all">Cancel</button>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">Upload</button>
+                    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showNewVersion = false" class="w-full rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-250 sm:w-auto">Cancel</button>
+                        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 sm:w-auto">Upload</button>
                     </div>
                 </form>
             </div>
