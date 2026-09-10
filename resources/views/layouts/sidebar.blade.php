@@ -7,10 +7,10 @@
 >
     <!-- Logo -->
     <div class="flex h-16 items-center justify-between border-b border-slate-800 px-6">
-        <a href="{{ route('dashboard') }}" class="flex items-center space-x-3">
-            <div class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/20">
-                S
-            </div>
+        <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white p-1 shadow-md shadow-slate-950/30">
+                <x-application-logo class="h-full w-full object-contain" />
+            </span>
             <span class="font-bold text-lg text-white tracking-wider">SIMADU</span>
         </a>
         <button

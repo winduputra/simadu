@@ -12,6 +12,10 @@ layouts. Mobile adaptations prioritize access, clarity, and predictable reflow.
 - Primary accent: Tailwind `indigo-500`, `indigo-600`, and `indigo-700`.
 - Application surfaces: `slate-50` page, `white` cards and header, `slate-900`
   navigation, and `slate-200` borders.
+- Guest auth canvas: layered `slate-900` (`#0f172a`), `indigo-900`
+  (`#312e81`), `blue-600` (`#2563eb`), and `sky-400` (`#38bdf8`).
+  The transparent brand mark sits on a solid white surface. These scoped CSS
+  tokens may be authored in the guest layout when generated Tailwind CSS is stale.
 - Semantic feedback: emerald for success, rose for destructive/error states,
   and amber only where an existing warning state uses it.
 - Corners: `rounded-lg` for compact controls, `rounded-xl` for cards and menus,

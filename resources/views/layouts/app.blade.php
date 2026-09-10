@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name', 'SIMADU') }}</title>
+        <link rel="icon" href="{{ asset('simadu.ico') }}" sizes="any">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
