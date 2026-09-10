@@ -43,7 +43,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'nip' => 'required|string|max:18|unique:users',
             'nama' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'nullable|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
             'unit_kerja_id' => 'nullable|exists:unit_kerjas,id',
@@ -51,12 +51,12 @@ class UserController extends Controller
         ]);
 
         User::create([
-            'nip' => $request->nip,
-            'nama' => $request->nama,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id' => $request->role_id,
-            'unit_kerja_id' => $request->unit_kerja_id,
+            'nip' => $validated['nip'],
+            'nama' => $validated['nama'],
+            'email' => $validated['email'] ?? null,
+            'password' => Hash::make($validated['password']),
+            'role_id' => $validated['role_id'],
+            'unit_kerja_id' => $validated['unit_kerja_id'] ?? null,
             'storage_quota' => $validated['storage_quota_gb'] * self::BYTES_PER_GB,
             'is_active' => true,
         ]);

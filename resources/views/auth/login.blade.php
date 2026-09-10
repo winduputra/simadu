@@ -18,9 +18,9 @@
         @csrf
 
         <div>
-            <label for="email" class="block text-sm font-semibold text-slate-200">{{ __('Email') }}</label>
-            <input id="email" class="mt-2.5 block w-full rounded-xl border-slate-300 bg-slate-100 px-5 py-4 text-base text-slate-950 shadow-sm transition-colors placeholder:text-slate-400 hover:border-indigo-300 focus:border-indigo-500 focus:bg-white focus:ring-indigo-500" type="email" name="email" value="{{ old('email') }}" placeholder="name@example.com" required autofocus autocomplete="username">
-            <x-input-error :messages="$errors->get('email')" class="mt-2 text-rose-300" />
+            <label for="identifier" class="block text-sm font-semibold text-slate-200">{{ __('NIP or E-mail') }}</label>
+            <input id="identifier" class="mt-2.5 block w-full rounded-xl border-slate-300 bg-slate-100 px-5 py-4 text-base text-slate-950 shadow-sm transition-colors placeholder:text-slate-400 hover:border-indigo-300 focus:border-indigo-500 focus:bg-white focus:ring-indigo-500" type="text" name="identifier" value="{{ old('identifier') }}" placeholder="NIP or E-mail" required autofocus autocomplete="username">
+            <x-input-error :messages="$errors->get('identifier')" class="mt-2 text-rose-300" />
         </div>
 
         <div>

@@ -25,8 +25,8 @@
                         @error('nama') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
-                        <input type="email" name="email" required placeholder="Enter email..." value="{{ old('email') }}" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Email Address (Optional)</label>
+                        <input type="email" name="email" placeholder="Enter email (optional)..." value="{{ old('email') }}" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         @error('email') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
