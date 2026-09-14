@@ -1,4 +1,12 @@
 <x-app-layout>
+    @php
+        $canBulkAct = fn ($item) => auth()->user()->isSuperAdmin() || $item->user_id === auth()->id();
+        $selectableFolders = $folders->filter($canBulkAct);
+        $selectableDocuments = $documents->filter($canBulkAct);
+        $selectionOrder = $selectableFolders->map(fn ($item) => 'folder-'.$item->id)
+            ->concat($selectableDocuments->map(fn ($item) => 'document-'.$item->id))
+            ->values();
+    @endphp
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <div class="space-y-8 relative min-h-[500px]" x-data="{
         showCreateFolder: false,
@@ -7,6 +15,7 @@
         showRenameFile: false,
         showMove: false,
         showShareModal: false,
+        showBulkShareModal: false,
         shareItemType: 'folder',
         shareItemId: null,
         shareItemName: '',
@@ -27,6 +36,46 @@
         activeFileName: '',
         activeType: '',
         allFolders: @js($folders),
+        selectionOrder: @js($selectionOrder),
+        selectedItems: [],
+        selectionAnchor: null,
+        isSelected(key) {
+            return this.selectedItems.includes(key);
+        },
+        selectedIds(type) {
+            return this.selectedItems
+                .filter(key => key.startsWith(`${type}-`))
+                .map(key => Number(key.substring(type.length + 1)));
+        },
+        toggleSelection(event, key) {
+            if (event.shiftKey && this.selectionAnchor) {
+                const anchorIndex = this.selectionOrder.indexOf(this.selectionAnchor);
+                const currentIndex = this.selectionOrder.indexOf(key);
+                if (anchorIndex !== -1 && currentIndex !== -1) {
+                    const start = Math.min(anchorIndex, currentIndex);
+                    const end = Math.max(anchorIndex, currentIndex) + 1;
+                    const range = this.selectionOrder.slice(start, end);
+                    this.selectedItems = event.ctrlKey || event.metaKey
+                        ? [...new Set([...this.selectedItems, ...range])]
+                        : range;
+                    return;
+                }
+            }
+            this.selectedItems = this.isSelected(key)
+                ? this.selectedItems.filter(item => item !== key)
+                : [...this.selectedItems, key];
+            this.selectionAnchor = key;
+        },
+        handleItemModifierClick(event, key) {
+            if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
+            if (event.target.closest('a, button, input, form, select')) return;
+            event.preventDefault();
+            this.toggleSelection(event, key);
+        },
+        clearSelection() {
+            this.selectedItems = [];
+            this.selectionAnchor = null;
+        },
         isDragging: false,
         uploads: [],
         contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '', publicLinks: [], shares: [], returnFocus: null },
@@ -47,7 +96,7 @@
         },
         containDialogFocus(event, root) {
             const dialogIsOpen = this.showCreateFolder || this.showUpload || this.showRenameFolder
-                || this.showRenameFile || this.showMove || this.showShareModal;
+                || this.showRenameFile || this.showMove || this.showShareModal || this.showBulkShareModal;
             if (!dialogIsOpen) return;
             const dialog = [...root.querySelectorAll('[role=&quot;dialog&quot;]')]
                 .find(element => getComputedStyle(element).display !== 'none');
@@ -60,12 +109,29 @@
             this.showRenameFile = false;
             this.showMove = false;
             this.showShareModal = false;
+            this.showBulkShareModal = false;
         },
         openContextMenu(e, type, id, name, publicLinks = [], shares = []) {
+            const isActionButton = e.currentTarget.matches('button');
+            if (isActionButton && this.contextMenu.show && this.contextMenu.type === type && this.contextMenu.id === id) {
+                this.contextMenu.show = false;
+                this.contextMenu.returnFocus = null;
+                return;
+            }
+            const trigger = isActionButton
+                ? e.currentTarget
+                : e.currentTarget.querySelector('[x-ref=&quot;actionsTrigger&quot;]');
+            const triggerRect = trigger?.getBoundingClientRect();
+            const requestedX = isActionButton && triggerRect
+                ? triggerRect.right - this.contextMenuWidth
+                : e.clientX;
+            const requestedY = isActionButton && triggerRect
+                ? triggerRect.bottom + 8
+                : e.clientY;
             this.contextMenu.show = true;
-            this.contextMenu.returnFocus = e.currentTarget.querySelector('[x-ref=&quot;actionsTrigger&quot;]');
-            this.contextMenu.x = Math.max(this.contextMenuMargin, Math.min(e.clientX, window.innerWidth - this.contextMenuWidth - this.contextMenuMargin));
-            this.contextMenu.y = Math.max(this.contextMenuMargin, Math.min(e.clientY, window.innerHeight - this.contextMenuHeight - this.contextMenuMargin));
+            this.contextMenu.returnFocus = trigger;
+            this.contextMenu.x = Math.max(this.contextMenuMargin, Math.min(requestedX, window.innerWidth - this.contextMenuWidth - this.contextMenuMargin));
+            this.contextMenu.y = Math.max(this.contextMenuMargin, Math.min(requestedY, window.innerHeight - this.contextMenuHeight - this.contextMenuMargin));
             this.contextMenu.type = type;
             this.contextMenu.id = id;
             this.contextMenu.name = name;
@@ -199,7 +265,7 @@
             this.uploads = [];
         }
     }"
-    @click="contextMenu.show = false"
+    @click="if (contextMenu.show) closeContextMenu($nextTick)"
     @contextmenu.prevent="contextMenu.show = false"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
@@ -265,13 +331,36 @@
             </div>
         </div>
 
+        <div x-show="selectedItems.length > 0" x-cloak data-bulk-action-bar class="sticky top-4 z-30 flex flex-col gap-3 rounded-2xl border border-indigo-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-slate-700"><span x-text="selectedItems.length"></span> item selected</p>
+                <button type="button" @click="clearSelection()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Clear</button>
+            </div>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <form action="{{ route('documents.bulk-download') }}" method="POST" class="contents">
+                    @csrf
+                    <template x-for="id in selectedIds('folder')" :key="`download-folder-${id}`">
+                        <input type="hidden" name="folder_ids[]" :value="id">
+                    </template>
+                    <template x-for="id in selectedIds('document')" :key="`download-document-${id}`">
+                        <input type="hidden" name="document_ids[]" :value="id">
+                    </template>
+                    <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Download ZIP</button>
+                </form>
+                <button type="button" @click="dialogReturnFocus = $event.currentTarget; showBulkShareModal = true" class="inline-flex min-h-10 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">Share selected</button>
+            </div>
+        </div>
+
         <!-- Folders Section -->
         @if(!$folders->isEmpty())
         <div>
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Folders</h2>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
                 @foreach($folders as $f)
-                    <div @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="group bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
+                    <div @click="handleItemModifierClick($event, 'folder-{{ $f->id }}')" @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" :class="isSelected('folder-{{ $f->id }}') ? 'border-indigo-400 bg-indigo-50/60 ring-2 ring-indigo-100' : 'border-slate-200 bg-white'" class="group rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
+                        @if($canBulkAct($f))
+                            <input type="checkbox" :checked="isSelected('folder-{{ $f->id }}')" @click.stop="toggleSelection($event, 'folder-{{ $f->id }}')" class="mr-3 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select folder {{ $f->nama }}">
+                        @endif
                         <a href="{{ route('drive.index', $f->id) }}" class="flex items-center space-x-3 truncate flex-1 mr-2">
                             <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -281,30 +370,10 @@
                             </span>
                         </a>
 
-                        <!-- Dropdown Menu -->
-                        <div class="relative" x-data="{ open: false }" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()">
-                            <button x-ref="actionsTrigger" type="button" @click="open = !open" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open folder actions for {{ $f->nama }}">
+                        <div>
+                            <button x-ref="actionsTrigger" type="button" @click.stop="openContextMenu($event, 'folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" :aria-expanded="contextMenu.show && contextMenu.type === 'folder' && contextMenu.id === {{ $f->id }}" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-haspopup="menu" aria-label="Open folder actions for {{ $f->nama }}">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                             </button>
-                            <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40">
-                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
-                                    Share & Links
-                                </button>
-                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFolderId = {{ $f->id }}; activeFolderName = {{ Js::from($f->nama) }}; showRenameFolder = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                    Rename
-                                </button>
-                                <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFolderId = {{ $f->id }}; activeFolderName = {{ Js::from($f->nama) }}; activeType = 'folder'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                    Move to...
-                                </button>
-                                <hr class="border-slate-100 my-1">
-                                <form action="{{ route('folders.destroy', $f->id) }}" method="POST" onsubmit="return confirm('Move folder and all contents to Trash?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="w-full flex items-center px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 text-left">
-                                        Delete
-                                    </button>
-                                </form>
-                            </div>
                         </div>
                     </div>
                 @endforeach
@@ -330,10 +399,15 @@
                             <article
                                 x-data="{ open: false }"
                                 @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()"
+                                @click="handleItemModifierClick($event, 'document-{{ $doc->id }}')"
                                 @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})"
+                                :class="isSelected('document-{{ $doc->id }}') ? 'bg-indigo-50/60 ring-2 ring-inset ring-indigo-100' : ''"
                                 class="space-y-4 p-4 sm:p-5"
                             >
                                 <div class="flex min-w-0 items-start gap-3">
+                                    @if($canBulkAct($doc))
+                                        <input type="checkbox" :checked="isSelected('document-{{ $doc->id }}')" @click.stop="toggleSelection($event, 'document-{{ $doc->id }}')" class="mt-2 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select file {{ $doc->nama }}">
+                                    @endif
                                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     </div>
@@ -391,6 +465,7 @@
                         <table class="w-full table-fixed text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                                    <th class="w-10 px-2 py-3 xl:pl-6"><span class="sr-only">Select</span></th>
                                     <th class="px-2 py-3 xl:px-6">Name</th>
                                     <th class="px-2 py-3 xl:px-6">Category</th>
                                     <th class="whitespace-nowrap px-2 py-3 xl:px-6">Size</th>
@@ -400,7 +475,12 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach($documents as $doc)
-                                    <tr @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="hover:bg-slate-50/80 transition-colors text-sm text-slate-700 cursor-context-menu">
+                                    <tr @click="handleItemModifierClick($event, 'document-{{ $doc->id }}')" @contextmenu.stop.prevent="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" :class="isSelected('document-{{ $doc->id }}') ? 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-100' : 'hover:bg-slate-50/80'" class="transition-colors text-sm text-slate-700 cursor-context-menu">
+                                        <td class="px-2 py-4 xl:pl-6">
+                                            @if($canBulkAct($doc))
+                                                <input type="checkbox" :checked="isSelected('document-{{ $doc->id }}')" @click.stop="toggleSelection($event, 'document-{{ $doc->id }}')" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select file {{ $doc->nama }}">
+                                            @endif
+                                        </td>
                                         <td class="px-2 py-4 font-semibold text-slate-800 xl:px-6">
                                             <div class="flex items-center space-x-3">
                                                 <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
@@ -430,7 +510,7 @@
                                             {{ $doc->updated_at->diffForHumans() }}
                                         </td>
                                         <td class="px-2 py-4 text-right xl:px-6">
-                                            <div class="flex flex-wrap items-center justify-end gap-1 xl:gap-2" x-data="{ open: false }" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()">
+                                            <div class="flex flex-wrap items-center justify-end gap-1 xl:gap-2">
                                                 <a href="{{ route('documents.preview', $doc->id) }}" target="_blank" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-all" title="Preview" aria-label="Preview {{ $doc->nama }}">
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 </a>
@@ -438,33 +518,10 @@
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                                 </a>
 
-                                                <!-- Dropdown Actions -->
-                                                <div class="relative">
-                                                    <button x-ref="actionsTrigger" type="button" @click="open = !open" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-label="Open file actions for {{ $doc->nama }}">
+                                                <div>
+                                                    <button x-ref="actionsTrigger" type="button" @click.stop="openContextMenu($event, 'file', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" :aria-expanded="contextMenu.show && contextMenu.type === 'file' && contextMenu.id === {{ $doc->id }}" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2" aria-haspopup="menu" aria-label="Open file actions for {{ $doc->nama }}">
                                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
                                                     </button>
-                                                    <div x-show="open" @click.away="open = false" @keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()" x-transition class="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-[90]">
-                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; openShareModal('document', {{ $doc->id }}, {{ Js::from($doc->nama) }}, {{ $doc->publicLinks->toJson() }}, {{ $doc->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" class="w-full flex items-center px-4 py-2 text-xs text-indigo-600 hover:bg-indigo-50 text-left font-semibold">
-                                                            Share & Links
-                                                        </button>
-                                                        <a href="{{ route('documents.show', $doc->id) }}" class="w-full block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                                            Details
-                                                        </a>
-                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; showRenameFile = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                                            Rename
-                                                        </button>
-                                                        <button @click="dialogReturnFocus = $refs.actionsTrigger; open = false; activeFileId = {{ $doc->id }}; activeFileName = {{ Js::from($doc->nama) }}; activeType = 'file'; showMove = true" class="w-full flex items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 text-left">
-                                                            Move to...
-                                                        </button>
-                                                        <hr class="border-slate-100 my-1">
-                                                        <form action="{{ route('documents.destroy', $doc->id) }}" method="POST" onsubmit="return confirm('Move document to Trash?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="w-full flex items-center px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 text-left">
-                                                                Delete
-                                                            </button>
-                                                        </form>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -585,6 +642,8 @@
                 </form>
             </div>
         </div>
+
+        @include('drive.partials.bulk-share-modal')
 
         <!-- Share Item Modal -->
         <div x-show="showShareModal" x-init="$watch('showShareModal', value => value ? activateDialog($el) : restoreDialogFocus($nextTick))" tabindex="-1" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center" x-cloak role="dialog" aria-modal="true" aria-labelledby="share-item-title">
@@ -845,8 +904,12 @@
              x-transition.opacity.duration.200ms
              class="fixed bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 z-[100] w-48 overflow-hidden"
              :style="`left: ${contextMenu.x}px; top: ${contextMenu.y}px;`"
+             x-effect="if (contextMenu.show) requestAnimationFrame(() => $el.focus())"
              @click.stop
              @keydown.escape.stop.prevent="closeContextMenu($nextTick)"
+             tabindex="-1"
+             role="menu"
+             aria-label="Item actions"
              x-cloak>
 
             <template x-if="contextMenu.type === 'folder'">

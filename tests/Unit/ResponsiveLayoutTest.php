@@ -119,9 +119,9 @@ class ResponsiveLayoutTest extends TestCase
         $this->assertStringNotContainsString("activeFolderName = '{{ \$f->nama }}'", $view);
         $this->assertStringNotContainsString("'{{ addslashes(\$f->nama) }}'", $view);
         $this->assertStringNotContainsString("'{{ addslashes(\$doc->nama) }}'", $view);
-        $this->assertGreaterThanOrEqual(4, substr_count($view, 'Js::from($f->nama)'));
+        $this->assertGreaterThanOrEqual(2, substr_count($view, 'Js::from($f->nama)'));
         $this->assertStringNotContainsString("activeFileName = '{{ \$doc->nama }}'", $view);
-        $this->assertGreaterThanOrEqual(6, substr_count($view, 'Js::from($doc->nama)'));
+        $this->assertGreaterThanOrEqual(4, substr_count($view, 'Js::from($doc->nama)'));
         $this->assertStringContainsString('type="button"', $shareCloseTag);
     }
 
@@ -131,18 +131,49 @@ class ResponsiveLayoutTest extends TestCase
 
         $this->assertGreaterThanOrEqual(3, substr_count($view, 'x-ref="actionsTrigger"'));
         $this->assertGreaterThanOrEqual(3, substr_count($view, 'focus-visible:ring-2 focus-visible:ring-indigo-500'));
-        $this->assertGreaterThanOrEqual(3, substr_count($view, '@keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()"'));
-        $this->assertGreaterThanOrEqual(6, substr_count($view, 'dialogReturnFocus = $refs.actionsTrigger'));
+        $this->assertGreaterThanOrEqual(2, substr_count($view, '@keydown.escape.stop.prevent="open = false; $refs.actionsTrigger.focus()"'));
+        $this->assertGreaterThanOrEqual(3, substr_count($view, 'dialogReturnFocus = $refs.actionsTrigger'));
         $this->assertStringContainsString('returnFocus: null', $view);
-        $this->assertStringContainsString('this.contextMenu.returnFocus = e.currentTarget.querySelector', $view);
+        $this->assertStringContainsString("const isActionButton = e.currentTarget.matches('button');", $view);
+        $this->assertStringContainsString('this.contextMenu.returnFocus = trigger;', $view);
         $this->assertStringContainsString('closeContextMenu(nextTick)', $view);
+        $this->assertStringContainsString('requestAnimationFrame(() => $el.focus())', $view);
         $this->assertGreaterThanOrEqual(6, substr_count($view, 'dialogReturnFocus = contextMenu.returnFocus'));
         $this->assertStringContainsString('if (!this.dialogReturnFocus) this.dialogReturnFocus = document.activeElement;', $view);
         $this->assertStringContainsString('restoreDialogFocus(nextTick)', $view);
-        $this->assertSame(6, substr_count($view, 'restoreDialogFocus($nextTick)'));
+        $this->assertSame(7, substr_count($view, 'restoreDialogFocus($nextTick)'));
         $this->assertStringNotContainsString('setTimeout(() => returnFocus.focus()', $view);
         $this->assertStringContainsString('const dialogIsOpen = this.showCreateFolder || this.showUpload', $view);
         $this->assertStringContainsString('if (!dialogIsOpen) return;', $view);
+    }
+
+    public function test_drive_selection_supports_ranges_and_bulk_actions_across_responsive_views(): void
+    {
+        $view = $this->readView('drive/index.blade.php');
+
+        $this->assertStringContainsString('$selectableFolders = $folders->filter($canBulkAct)', $view);
+        $this->assertStringContainsString('$selectableDocuments = $documents->filter($canBulkAct)', $view);
+        $this->assertStringContainsString('selectionOrder: @js($selectionOrder)', $view);
+        $this->assertStringContainsString('toggleSelection(event, key)', $view);
+        $this->assertStringContainsString('event.shiftKey && this.selectionAnchor', $view);
+        $this->assertStringContainsString('event.ctrlKey || event.metaKey', $view);
+        $this->assertSame(3, substr_count($view, 'aria-label="Select '));
+        $this->assertStringContainsString('data-bulk-action-bar', $view);
+        $this->assertStringContainsString("selectedIds('folder')", $view);
+        $this->assertStringContainsString("selectedIds('document')", $view);
+        $this->assertStringContainsString("route('documents.bulk-download')", $view);
+        $this->assertStringContainsString("route('shares.bulk-store')", $view);
+    }
+
+    public function test_drive_desktop_action_buttons_use_the_viewport_clamped_menu(): void
+    {
+        $view = $this->readView('drive/index.blade.php');
+
+        $this->assertStringContainsString('window.innerWidth - this.contextMenuWidth', $view);
+        $this->assertStringContainsString('window.innerHeight - this.contextMenuHeight', $view);
+        $this->assertStringContainsString('class="fixed bg-white border border-slate-200', $view);
+        $this->assertStringContainsString('role="menu"', $view);
+        $this->assertStringNotContainsString('class="absolute right-0 mt-1 w-44', $view);
     }
 
     public function test_trash_folder_grid_stays_readable_at_desktop_boundary(): void
@@ -261,7 +292,13 @@ class ResponsiveLayoutTest extends TestCase
 
     private function readView(string $relativePath): string
     {
-        return $this->readProjectFile('resources/views/'.$relativePath);
+        $view = $this->readProjectFile('resources/views/'.$relativePath);
+
+        if ($relativePath === 'drive/index.blade.php') {
+            $view .= $this->readProjectFile('resources/views/drive/partials/bulk-share-modal.blade.php');
+        }
+
+        return $view;
     }
 
     private function readOpeningTag(string $view, string $marker, string $relativePath): string

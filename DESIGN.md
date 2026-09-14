@@ -83,6 +83,20 @@ viewport-height constrained and vertically scrollable, with one-column forms on
 mobile and two columns from `sm`. Fixed upload status panels use viewport-safe
 insets and widths on mobile, returning to their current desktop size at `sm+`.
 
+### Drive Selection And Bulk Actions
+
+Every visible folder and file representation exposes a labelled checkbox. Selection
+is shared between the mobile card and desktop row for the same file. Shift selects
+an inclusive range in rendered order (folders, then files); Ctrl/Cmd toggles an
+item without clearing the current set. Selected items use an indigo border/ring and
+subtle indigo surface, never color alone. A bulk-action bar appears only while at
+least one item is selected, stacks safely on mobile, and provides count, clear,
+ZIP download, and internal share actions. Bulk share does not create public links.
+
+Action menus opened from pointer, keyboard, or context click use one fixed overlay
+clamped to viewport margins. They are never positioned inside an overflow-clipped
+card/table container and return focus to their originating action button on Escape.
+
 ## 6. Responsive Behavior
 
 - Mobile baseline: 320-639px; single-column content and stacked actions.
@@ -105,6 +119,8 @@ insets and widths on mobile, returning to their current desktop size at `sm+`.
 - Menus, dialogs, and drawers must support keyboard operation, Escape dismissal,
   visible focus, and focus restoration where an overlay temporarily takes focus.
 - Touch users retain the same document and folder actions exposed to pointer users.
+- Touch selection uses the explicit checkbox; modifier-key range selection is an
+  enhancement for hardware keyboards and pointer devices.
 
 ## 8. Accessibility, Debt, And Handoff
 
@@ -122,3 +138,6 @@ insets and widths on mobile, returning to their current desktop size at `sm+`.
   scrolling at the 1024px boundary.
 - Final handoff requires browser evidence at the required widths, keyboard drawer
   checks, modal checks, and confirmation that the 1280px desktop layout is stable.
+- Bulk downloads are generated as one recursive ZIP. Documents already included by
+  a selected ancestor folder are de-duplicated; only owners and super-admins may
+  execute bulk download or bulk share.

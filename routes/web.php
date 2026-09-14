@@ -9,6 +9,7 @@ use App\Http\Controllers\ShareController;
 use App\Http\Controllers\PublicLinkController;
 use App\Http\Controllers\TrashController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BulkDriveActionController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\UnitKerjaController as AdminUnitKerjaController;
 use App\Http\Controllers\Admin\DocumentCategoryController as AdminDocumentCategoryController;
@@ -48,6 +49,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Documents
     Route::post('/documents/upload', [DocumentController::class, 'upload'])->name('documents.upload');
+    Route::post('/documents/bulk-download', [BulkDriveActionController::class, 'download'])->name('documents.bulk-download');
     Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
     Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
     Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])->name('documents.preview');
@@ -65,6 +67,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Shares
     Route::get('/shared', [ShareController::class, 'shared'])->name('shares.shared');
     Route::post('/shares', [ShareController::class, 'store'])->name('shares.store');
+    Route::post('/shares/bulk', [BulkDriveActionController::class, 'share'])->name('shares.bulk-store');
     Route::delete('/shares/{share}', [ShareController::class, 'destroy'])->name('shares.destroy');
 
     // Public Links (generating)
