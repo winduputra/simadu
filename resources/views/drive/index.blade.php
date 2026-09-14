@@ -76,6 +76,25 @@
             this.selectedItems = [];
             this.selectionAnchor = null;
         },
+        itemKeysByType(type) {
+            return this.selectionOrder.filter(key => key.startsWith(`${type}-`));
+        },
+        areAllItemsOfTypeSelected(type) {
+            const itemKeys = this.itemKeysByType(type);
+            return itemKeys.length > 0 && itemKeys.every(key => this.selectedItems.includes(key));
+        },
+        toggleTypeSelection(type) {
+            const itemKeys = this.itemKeysByType(type);
+            if (this.areAllItemsOfTypeSelected(type)) {
+                this.selectedItems = this.selectedItems.filter(key => !itemKeys.includes(key));
+                if (this.selectionAnchor && itemKeys.includes(this.selectionAnchor)) {
+                    this.selectionAnchor = null;
+                }
+                return;
+            }
+            this.selectedItems = [...new Set([...this.selectedItems, ...itemKeys])];
+            this.selectionAnchor = itemKeys[0] ?? this.selectionAnchor;
+        },
         isDragging: false,
         uploads: [],
         contextMenu: { show: false, x: 0, y: 0, type: '', id: null, name: '', publicLinks: [], shares: [], returnFocus: null },
@@ -354,7 +373,12 @@
         <!-- Folders Section -->
         @if(!$folders->isEmpty())
         <div>
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Folders</h2>
+            <div class="mb-4 flex items-center gap-3">
+                @if(!$selectableFolders->isEmpty())
+                    <input type="checkbox" :checked="areAllItemsOfTypeSelected('folder')" x-effect="$el.indeterminate = selectedIds('folder').length > 0 && !areAllItemsOfTypeSelected('folder')" @click.stop="toggleTypeSelection('folder')" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select all folders">
+                @endif
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Folders</h2>
+            </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
                 @foreach($folders as $f)
                     <div @click="handleItemModifierClick($event, 'folder-{{ $f->id }}')" @contextmenu.stop.prevent="openContextMenu($event, 'folder', {{ $f->id }}, {{ Js::from($f->nama) }}, {{ $f->publicLinks->toJson() }}, {{ $f->shares->map(fn($s) => ['id' => $s->id, 'permission' => $s->permission, 'recipient' => $s->sharedTo ? ($s->sharedTo->nama ?? $s->sharedTo->name ?? 'Unknown') : 'Unknown'])->toJson() }})" :class="isSelected('folder-{{ $f->id }}') ? 'border-indigo-400 bg-indigo-50/60 ring-2 ring-indigo-100' : 'border-slate-200 bg-white'" class="group rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all flex items-center justify-between relative cursor-context-menu">
@@ -383,7 +407,13 @@
 
         <!-- Files Section -->
         <div>
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Files</h2>
+            <div class="mb-4 flex items-center gap-3 lg:hidden">
+                @if(!$selectableDocuments->isEmpty())
+                    <input type="checkbox" :checked="areAllItemsOfTypeSelected('document')" x-effect="$el.indeterminate = selectedIds('document').length > 0 && !areAllItemsOfTypeSelected('document')" @click.stop="toggleTypeSelection('document')" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select all files">
+                @endif
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Files</h2>
+            </div>
+            <h2 class="mb-4 hidden text-xs font-bold uppercase tracking-wider text-slate-400 lg:block">Files</h2>
             @if($documents->isEmpty())
                 <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
                     <div class="w-16 h-16 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center mx-auto mb-4">
@@ -465,7 +495,13 @@
                         <table class="w-full table-fixed text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                                    <th class="w-10 px-2 py-3 xl:pl-6"><span class="sr-only">Select</span></th>
+                                    <th class="w-10 px-2 py-3 xl:pl-6">
+                                        @if(!$selectableDocuments->isEmpty())
+                                            <input type="checkbox" :checked="areAllItemsOfTypeSelected('document')" x-effect="$el.indeterminate = selectedIds('document').length > 0 && !areAllItemsOfTypeSelected('document')" @click.stop="toggleTypeSelection('document')" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" aria-label="Select all files">
+                                        @else
+                                            <span class="sr-only">Select</span>
+                                        @endif
+                                    </th>
                                     <th class="px-2 py-3 xl:px-6">Name</th>
                                     <th class="px-2 py-3 xl:px-6">Category</th>
                                     <th class="whitespace-nowrap px-2 py-3 xl:px-6">Size</th>
