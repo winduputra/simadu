@@ -15,6 +15,10 @@ class UnitKerjaSeeder extends Seeder
             ['nama' => 'Bidang Perencanaan', 'kode' => 'BP'],
             ['nama' => 'Bidang Kepegawaian', 'kode' => 'BKPG'],
             ['nama' => 'Sekretariat', 'kode' => 'SEK'],
+            ['nama' => 'Bidang LPSE', 'kode' => 'LPSE'],
+            ['nama' => 'Bidang JF', 'kode' => 'JF'],
+            ['nama' => 'Bidang PSDM', 'kode' => 'PSDM'],
+            ['nama' => 'Bidang PBJ', 'kode' => 'PBJ'],
         ];
 
         foreach ($units as $unit) {

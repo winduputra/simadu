@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UnitKerjaSeeder::class,
             DocumentCategorySeeder::class,
             UserSeeder::class,
+            StaffSeeder::class,
         ]);
     }
 }
