@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Database;
 
+use App\Models\Role;
+use App\Models\UnitKerja;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\StaffSeeder;
@@ -98,6 +100,32 @@ class StaffSeederTest extends TestCase
         $this->seed(StaffSeeder::class);
 
         $this->assertSeededStaff();
+    }
+
+    public function test_staff_seeder_restores_a_soft_deleted_user_with_the_same_nip(): void
+    {
+        $this->seed([RoleSeeder::class, UnitKerjaSeeder::class]);
+
+        $user = User::create([
+            'role_id' => Role::query()->where('slug', 'user')->firstOrFail()->id,
+            'unit_kerja_id' => UnitKerja::query()->where('kode', 'LPSE')->firstOrFail()->id,
+            'nip' => '197006291998031004',
+            'nama' => 'DODI HENDRAWAN, ST., MEP',
+            'email' => null,
+            'password' => 'password',
+            'is_active' => true,
+            'storage_quota' => self::STORAGE_QUOTA,
+            'storage_used' => 0,
+        ]);
+        $user->delete();
+
+        $this->seed(StaffSeeder::class);
+
+        $restoredUser = User::query()->where('nip', $user->nip)->sole();
+
+        $this->assertSame($user->id, $restoredUser->id);
+        $this->assertNull($restoredUser->deleted_at);
+        $this->assertSame(1, User::withTrashed()->where('nip', $user->nip)->count());
     }
 
     private function assertSeededStaff(): void

@@ -92,7 +92,7 @@ class StaffSeeder extends Seeder
             $unit = UnitKerja::query()->where('kode', $unitCode)->firstOrFail();
 
             foreach ($staffMembers as [$name, $nip]) {
-                User::firstOrCreate(
+                $user = User::withTrashed()->firstOrCreate(
                     ['nip' => $nip],
                     [
                         'role_id' => $role->id,
@@ -105,6 +105,10 @@ class StaffSeeder extends Seeder
                         'storage_used' => 0,
                     ]
                 );
+
+                if ($user->trashed()) {
+                    $user->restore();
+                }
             }
         }
     }
